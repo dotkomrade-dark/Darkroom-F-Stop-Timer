@@ -196,6 +196,14 @@
     </div>
 
     <div class="field">
+      <label class="label">Mode</label>
+      <div class="tabs" id="modeToggle" style="grid-template-columns: 1fr 1fr;">
+        <button class="tab-btn" id="dodgeBtn">Dodge</button>
+        <button class="tab-btn active" id="burnBtn">Burn</button>
+      </div>
+    </div>
+
+    <div class="field">
       <label class="label">Offset</label>
       <div class="offset-row">
         <button id="offsetMinus">&minus;</button>
@@ -267,7 +275,7 @@
   var state = {
     roundMode: "0.1",
     strip: { baseTime: 8, increment: 1/3, steps: 6, centered: false, equalSides: true, stepsEachSide: 2, stepsDown: 2, stepsUp: 2 },
-    offset: { baseTime: 8, increment: 1/3, count: 0 }
+    offset: { baseTime: 8, increment: 1/3, count: 0, mode: "burn" }
   };
 
   // ---- helpers ----
@@ -465,7 +473,7 @@
   });
 
   bindHold(document.getElementById("offsetMinus"), function () {
-    state.offset.count -= 1; refreshOffset();
+    state.offset.count = Math.max(0, state.offset.count - 1); refreshOffset();
   });
   bindHold(document.getElementById("offsetPlus"), function () {
     state.offset.count += 1; refreshOffset();
@@ -474,15 +482,26 @@
     state.offset.count = 0; refreshOffset();
   });
 
+  document.getElementById("dodgeBtn").addEventListener("click", function () {
+    state.offset.mode = "dodge"; refreshOffset();
+  });
+  document.getElementById("burnBtn").addEventListener("click", function () {
+    state.offset.mode = "burn"; refreshOffset();
+  });
+
   function refreshOffset() {
     var o = state.offset;
     var baseInvalid = !o.baseTime || o.baseTime <= 0;
     offsetBaseTimeEl.classList.toggle("invalid", baseInvalid);
     offsetBaseWarningEl.classList.toggle("hidden", !baseInvalid);
 
+    document.getElementById("dodgeBtn").classList.toggle("active", o.mode === "dodge");
+    document.getElementById("burnBtn").classList.toggle("active", o.mode === "burn");
+
+    var signedCount = o.mode === "dodge" ? -o.count : o.count;
     var safeBase = o.baseTime > 0 ? o.baseTime : MIN_BASE_TIME;
     var roundedBase = roundTime(safeBase, state.roundMode);
-    var stops = o.count * o.increment;
+    var stops = signedCount * o.increment;
     var resultTime = roundTime(timeForStops(safeBase, stops), state.roundMode);
     var delta = resultTime - roundedBase;
     var actionTime = o.count === 0 ? roundedBase : Math.abs(delta);
@@ -492,13 +511,14 @@
     document.getElementById("offsetStopsLabel").textContent =
       formatStops(stops) + " stop" + (Math.abs(stops) !== 1 ? "s" : "");
     document.getElementById("offsetCountLabel").textContent =
-      (o.count >= 0 ? "+" : "\u2212") + Math.abs(o.count) + " \u00d7 " + (incLabel ? incLabel.label : "");
+      (o.mode === "dodge" ? "\u2212" : "+") + o.count + " \u00d7 " + (incLabel ? incLabel.label : "");
 
     document.getElementById("offsetReset").classList.toggle("hidden", o.count === 0);
 
-    var label = o.count === 0 ? "Base exposure" : (o.count > 0 ? "Burn \u2014 additional time after base" : "Dodge \u2014 time to hold back");
+    var label = o.count === 0 ? "Base exposure" : (o.mode === "burn" ? "Burn \u2014 additional time after base" : "Dodge \u2014 time to hold back");
     document.getElementById("resultLabel").textContent = label;
-    document.getElementById("resultTime").textContent = formatTime(actionTime);
+    var readoutSign = o.count === 0 ? "" : (o.mode === "dodge" ? "\u2212" : "+");
+    document.getElementById("resultTime").textContent = readoutSign + formatTime(actionTime);
 
     var secondary = document.getElementById("resultSecondary");
     if (o.count !== 0) {
