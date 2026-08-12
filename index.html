@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#000000" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<title>F-Stop Timer</title>
+<style>
+  :root {
+    --red-950:#450a0a; --red-900:#7f1d1d; --red-800:#991b1b; --red-700:#b91c1c;
+    --red-600:#dc2626; --red-500:#ef4444; --red-400:#f87171;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; background: #000; color: var(--red-400);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    -webkit-user-select: none; user-select: none;
+  }
+  input, select { user-select: text; -webkit-user-select: text; }
+  #app { max-width: 440px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 20px; }
+  header { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  header h1 { font-size: 20px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red-500); margin: 0; font-weight: 700; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--red-700); font-weight: 700; display: block; margin-bottom: 6px; }
+  .field { display: flex; flex-direction: column; }
+  .num-wrap { position: relative; }
+  .num-input {
+    width: 100%; background: #000; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px;
+    padding: 10px 12px; font-size: 24px; font-family: inherit; color: var(--red-400);
+    outline: none; letter-spacing: 0.02em;
+  }
+  .num-input:focus { border-color: var(--red-500); }
+  .num-input.invalid { border-color: var(--red-600); }
+  .num-suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--red-800); font-size: 14px; }
+  select.sel {
+    width: 100%; background: #000; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px;
+    padding: 10px 12px; font-size: 20px; font-family: inherit; color: var(--red-400); outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  select.sel:focus { border-color: var(--red-500); }
+  .warning { display: flex; align-items: center; gap: 6px; color: var(--red-500); font-size: 12px; font-weight: 700; margin-top: 6px; }
+  .checkbox-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; background: none; border: none; width: 100%; text-align: left; cursor: pointer; }
+  .checkbox-box { width: 20px; height: 20px; flex-shrink: 0; border-radius: 3px; border: 2px solid var(--red-800); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #000; }
+  .checkbox-box.checked { background: var(--red-600); border-color: var(--red-600); font-weight: 900; }
+  .checkbox-label { flex: 1; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--red-500); }
+  .checkbox-hint { font-size: 12px; color: var(--red-700); }
+  .stepper { display: flex; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; overflow: hidden; }
+  .stepper button { flex: 0 0 auto; background: rgba(69,10,10,0.4); border: none; color: var(--red-500); font-size: 20px; padding: 0 18px; touch-action: none; cursor: pointer; }
+  .stepper button:active { background: rgba(127,29,29,0.6); }
+  .stepper .val { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--red-400); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px; background: rgba(69,10,10,0.3); border: 1px solid rgba(127,29,29,0.6); border-radius: 10px; }
+  .tab-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 6px; border: none; background: none; color: var(--red-800); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; font-family: inherit; }
+  .tab-btn.active { background: rgba(127,29,29,0.6); color: var(--red-500); }
+  .panel { display: flex; flex-direction: column; gap: 20px; }
+  .panel.hidden { display: none; }
+  table.strip-table { width: 100%; border-collapse: collapse; }
+  .table-wrap { border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; overflow: hidden; }
+  .table-head { display: grid; grid-template-columns: 1fr 1.4fr 1.6fr 1.4fr; background: rgba(69,10,10,0.5); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--red-600); font-weight: 700; }
+  .table-head div { padding: 8px 10px; }
+  .table-head div:nth-child(3), .table-head div:nth-child(4) { text-align: right; }
+  .row-btn { display: grid; grid-template-columns: 1fr 1.4fr 1.6fr 1.4fr; width: 100%; background: none; border: none; border-top: 1px solid rgba(127,29,29,0.4); text-align: left; cursor: pointer; font-family: inherit; padding: 0; }
+  .row-btn:first-child { border-top: none; }
+  .row-btn.flash { background: rgba(127,29,29,0.5); }
+  .row-btn div { padding: 10px; }
+  .row-btn .c-step { color: var(--red-500); }
+  .row-btn .c-stops { color: var(--red-700); font-size: 13px; }
+  .row-btn .c-add { text-align: right; font-size: 18px; color: var(--red-400); }
+  .row-btn .c-total { text-align: right; font-size: 13px; color: var(--red-700); }
+  .row-note { padding: 0 10px 8px; border-top: none; }
+  .footnote { font-size: 12px; color: var(--red-800); line-height: 1.5; margin: 0; }
+  .result-box { border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(69,10,10,0.2); }
+  .result-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--red-700); font-weight: 700; text-align: center; }
+  .result-time { font-size: 48px; color: var(--red-400); line-height: 1.1; }
+  .result-secondary { font-size: 13px; color: var(--red-700); }
+  .reset-btn { align-self: flex-start; background: none; border: none; border-bottom: 1px solid rgba(127,29,29,0.6); color: var(--red-800); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; padding: 0 0 2px; cursor: pointer; font-family: inherit; }
+  .offset-row { display: flex; align-items: stretch; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; overflow: hidden; }
+  .offset-row button { flex: 0 0 auto; background: rgba(69,10,10,0.4); border: none; color: var(--red-500); font-size: 22px; padding: 0 20px; touch-action: none; cursor: pointer; }
+  .offset-row button:active { background: rgba(127,29,29,0.6); }
+  .offset-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0; }
+  .offset-stops { font-size: 24px; color: var(--red-400); }
+  .offset-count { font-size: 11px; color: var(--red-800); margin-top: 2px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span style="font-size:20px;">&#9201;</span>
+    <h1>F-Stop Timer</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabStripBtn">&#129514; Test strip</button>
+    <button class="tab-btn" id="tabOffsetBtn">&#9878; Dodge / burn</button>
+  </div>
+
+  <!-- ===== TEST STRIP PANEL ===== -->
+  <div class="panel" id="panelStrip">
+    <div class="field">
+      <label class="label">Base time</label>
+      <div class="num-wrap">
+        <input type="number" step="0.1" class="num-input" id="stripBaseTime" value="8" />
+        <span class="num-suffix">sec</span>
+      </div>
+      <div class="warning hidden" id="stripBaseWarning">&#9888; Enter a time above 0 &mdash; using 0.1s for now</div>
+    </div>
+
+    <div class="field">
+      <label class="label">Increment</label>
+      <select class="sel" id="stripIncrement"></select>
+    </div>
+
+    <button class="checkbox-row" id="centeredCheckbox">
+      <span class="checkbox-box" id="centeredBox"></span>
+      <span class="checkbox-label">Centered on base time</span>
+      <span class="checkbox-hint" id="centeredHint">base = first strip</span>
+    </button>
+
+    <div id="sectionSequential" class="field">
+      <label class="label">Steps</label>
+      <div class="stepper">
+        <button id="stepsMinus">&minus;</button>
+        <div class="val" id="stepsValue">6</div>
+        <button id="stepsPlus">+</button>
+      </div>
+    </div>
+
+    <div id="sectionCentered" class="hidden" style="display:flex; flex-direction:column; gap:12px;">
+      <button class="checkbox-row" id="equalSidesCheckbox">
+        <span class="checkbox-box checked" id="equalSidesBox">&#10003;</span>
+        <span class="checkbox-label">Equal steps both sides</span>
+        <span class="checkbox-hint" id="equalSidesHint">same count both ways</span>
+      </button>
+
+      <div id="sectionEqual" class="field">
+        <label class="label" id="eachSideLabel">Steps each side (2)</label>
+        <div class="stepper">
+          <button id="eachSideMinus">&minus;</button>
+          <div class="val" id="eachSideValue">2</div>
+          <button id="eachSidePlus">+</button>
+        </div>
+      </div>
+
+      <div id="sectionCustom" class="grid-2 hidden">
+        <div class="field">
+          <label class="label" id="downLabel">Steps down (2)</label>
+          <div class="stepper">
+            <button id="downMinus">&minus;</button>
+            <div class="val" id="downValue">2</div>
+            <button id="downPlus">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" id="upLabel">Steps up (2)</label>
+          <div class="stepper">
+            <button id="upMinus">&minus;</button>
+            <div class="val" id="upValue">2</div>
+            <button id="upPlus">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head">
+        <div>Step</div><div>Stops</div><div>Additional time</div><div>Total time</div>
+      </div>
+      <div id="stripTableBody"></div>
+    </div>
+
+    <p class="footnote">Tap a row to set it as the base time on the Dodge / Burn tab. "Additional time" is the interval to run after covering the previous section. "Total time" is the cumulative exposure for that section.</p>
+  </div>
+
+  <!-- ===== OFFSET PANEL ===== -->
+  <div class="panel hidden" id="panelOffset">
+    <div class="field">
+      <label class="label">Base time</label>
+      <div class="num-wrap">
+        <input type="number" step="0.1" class="num-input" id="offsetBaseTime" value="8" />
+        <span class="num-suffix">sec</span>
+      </div>
+      <div class="warning hidden" id="offsetBaseWarning">&#9888; Enter a time above 0 &mdash; using 0.1s for now</div>
+    </div>
+
+    <div class="field">
+      <label class="label">Increment</label>
+      <select class="sel" id="offsetIncrement"></select>
+    </div>
+
+    <div class="field">
+      <label class="label">Offset</label>
+      <div class="offset-row">
+        <button id="offsetMinus">&minus;</button>
+        <div class="offset-center">
+          <div class="offset-stops" id="offsetStopsLabel">base stop</div>
+          <div class="offset-count" id="offsetCountLabel">+0 &times; 1/3</div>
+        </div>
+        <button id="offsetPlus">+</button>
+      </div>
+    </div>
+
+    <button class="reset-btn hidden" id="offsetReset">Reset to base</button>
+
+    <div class="result-box">
+      <div class="result-label" id="resultLabel">Base exposure</div>
+      <div class="result-time" id="resultTime">8.0s</div>
+      <div class="result-secondary hidden" id="resultSecondary"></div>
+      <div class="warning hidden" id="resultWarning" style="margin-top:4px;">&#9888; Under 2s &mdash; hard to hand-time</div>
+    </div>
+
+    <p class="footnote">Burning happens after the base exposure, so the figure above is the extra time to give that area once the base pass is done. Dodging happens during the base exposure, so the figure above is how long to hold back light on that area within the base pass &mdash; not a separate pass afterwards.</p>
+  </div>
+
+  <div class="field">
+    <label class="label">Rounding</label>
+    <select class="sel" id="roundMode">
+      <option value="off">Off</option>
+      <option value="0.1" selected>0.1s</option>
+      <option value="1">1s</option>
+    </select>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var INCREMENTS = [
+    { label: "1/6", value: 1/6 }, { label: "1/5", value: 1/5 }, { label: "1/4", value: 1/4 },
+    { label: "1/3", value: 1/3 }, { label: "1/2", value: 1/2 }, { label: "1", value: 1 },
+    { label: "2", value: 2 }, { label: "3", value: 3 }, { label: "4", value: 4 },
+    { label: "5", value: 5 }, { label: "6", value: 6 }
+  ];
+  var SHORT_TIME_WARNING = 2;
+  var MIN_BASE_TIME = 0.1;
+
+  function timeForStops(base, stops) { return base * Math.pow(2, stops); }
+
+  function roundTime(value, mode) {
+    if (!isFinite(value)) return value;
+    if (mode === "0.1") return Math.round(value * 10) / 10;
+    if (mode === "1") return Math.round(value);
+    return value;
+  }
+
+  function formatTime(totalSeconds) {
+    if (!isFinite(totalSeconds) || totalSeconds < 0) return "--";
+    if (totalSeconds < 60) return totalSeconds.toFixed(totalSeconds < 10 ? 2 : 1) + "s";
+    var m = Math.floor(totalSeconds / 60);
+    var s = totalSeconds - m * 60;
+    return m + ":" + s.toFixed(1).padStart(4, "0");
+  }
+
+  function formatStops(stops) {
+    if (stops === 0) return "base";
+    var sign = stops > 0 ? "+" : "\u2212";
+    return sign + Math.abs(stops).toFixed(3).replace(/\.?0+$/, "");
+  }
+
+  // ---- state ----
+  var state = {
+    roundMode: "0.1",
+    strip: { baseTime: 8, increment: 1/3, steps: 6, centered: false, equalSides: true, stepsEachSide: 2, stepsDown: 2, stepsUp: 2 },
+    offset: { baseTime: 8, increment: 1/3, count: 0 }
+  };
+
+  // ---- helpers ----
+  function populateIncrementSelect(sel) {
+    INCREMENTS.forEach(function (inc) {
+      var opt = document.createElement("option");
+      opt.value = inc.value;
+      opt.textContent = inc.label + " stop";
+      sel.appendChild(opt);
+    });
+  }
+  var stripIncrementSel = document.getElementById("stripIncrement");
+  var offsetIncrementSel = document.getElementById("offsetIncrement");
+  populateIncrementSelect(stripIncrementSel);
+  populateIncrementSelect(offsetIncrementSel);
+  stripIncrementSel.value = state.strip.increment;
+  offsetIncrementSel.value = state.offset.increment;
+
+  function bindHold(el, fn) {
+    var t1 = null, t2 = null;
+    function clear() { clearTimeout(t1); clearInterval(t2); }
+    function start(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      fn();
+      t1 = setTimeout(function () { t2 = setInterval(fn, 90); }, 450);
+    }
+    el.addEventListener("pointerdown", start);
+    el.addEventListener("pointerup", clear);
+    el.addEventListener("pointerleave", clear);
+    el.addEventListener("pointercancel", clear);
+  }
+
+  // ===== TEST STRIP =====
+  var stripBaseTimeEl = document.getElementById("stripBaseTime");
+  var stripBaseWarningEl = document.getElementById("stripBaseWarning");
+
+  stripBaseTimeEl.addEventListener("input", function () {
+    var v = parseFloat(stripBaseTimeEl.value);
+    state.strip.baseTime = isNaN(v) ? 0 : v;
+    refreshStrip();
+  });
+  stripIncrementSel.addEventListener("change", function () {
+    state.strip.increment = parseFloat(stripIncrementSel.value);
+    refreshStrip();
+  });
+
+  var centeredCheckbox = document.getElementById("centeredCheckbox");
+  var centeredBox = document.getElementById("centeredBox");
+  var centeredHint = document.getElementById("centeredHint");
+  var sectionSequential = document.getElementById("sectionSequential");
+  var sectionCentered = document.getElementById("sectionCentered");
+
+  centeredCheckbox.addEventListener("click", function () {
+    state.strip.centered = !state.strip.centered;
+    refreshStrip();
+  });
+
+  bindHold(document.getElementById("stepsMinus"), function () {
+    state.strip.steps = Math.max(1, state.strip.steps - 1); refreshStrip();
+  });
+  bindHold(document.getElementById("stepsPlus"), function () {
+    state.strip.steps = Math.min(21, state.strip.steps + 1); refreshStrip();
+  });
+
+  var equalSidesCheckbox = document.getElementById("equalSidesCheckbox");
+  var equalSidesBox = document.getElementById("equalSidesBox");
+  var equalSidesHint = document.getElementById("equalSidesHint");
+  var sectionEqual = document.getElementById("sectionEqual");
+  var sectionCustom = document.getElementById("sectionCustom");
+
+  equalSidesCheckbox.addEventListener("click", function () {
+    state.strip.equalSides = !state.strip.equalSides;
+    refreshStrip();
+  });
+
+  bindHold(document.getElementById("eachSideMinus"), function () {
+    state.strip.stepsEachSide = Math.max(1, state.strip.stepsEachSide - 1); refreshStrip();
+  });
+  bindHold(document.getElementById("eachSidePlus"), function () {
+    state.strip.stepsEachSide = Math.min(15, state.strip.stepsEachSide + 1); refreshStrip();
+  });
+  bindHold(document.getElementById("downMinus"), function () {
+    state.strip.stepsDown = Math.max(0, state.strip.stepsDown - 1); refreshStrip();
+  });
+  bindHold(document.getElementById("downPlus"), function () {
+    state.strip.stepsDown = Math.min(15, state.strip.stepsDown + 1); refreshStrip();
+  });
+  bindHold(document.getElementById("upMinus"), function () {
+    state.strip.stepsUp = Math.max(0, state.strip.stepsUp - 1); refreshStrip();
+  });
+  bindHold(document.getElementById("upPlus"), function () {
+    state.strip.stepsUp = Math.min(15, state.strip.stepsUp + 1); refreshStrip();
+  });
+
+  var flashIndex = null;
+  var flashTimer = null;
+
+  function computeStripRows() {
+    var s = state.strip;
+    var safeBase = s.baseTime > 0 ? s.baseTime : MIN_BASE_TIME;
+    var indices = [];
+    if (!s.centered) {
+      for (var i = 0; i < s.steps; i++) indices.push(i);
+    } else {
+      var down = s.equalSides ? s.stepsEachSide : s.stepsDown;
+      var up = s.equalSides ? s.stepsEachSide : s.stepsUp;
+      for (var j = -down; j <= up; j++) indices.push(j);
+    }
+    var prevTime = null;
+    return indices.map(function (idx) {
+      var stops = idx * s.increment;
+      var rawTime = timeForStops(safeBase, stops);
+      var time = roundTime(rawTime, state.roundMode);
+      var interval = prevTime === null ? time : time - prevTime;
+      prevTime = time;
+      return { index: idx, stops: stops, time: time, interval: interval };
+    });
+  }
+
+  function refreshStrip() {
+    var s = state.strip;
+    var baseInvalid = !s.baseTime || s.baseTime <= 0;
+    stripBaseTimeEl.classList.toggle("invalid", baseInvalid);
+    stripBaseWarningEl.classList.toggle("hidden", !baseInvalid);
+
+    centeredBox.classList.toggle("checked", s.centered);
+    centeredBox.innerHTML = s.centered ? "&#10003;" : "";
+    centeredHint.textContent = s.centered ? "middle = base" : "base = first strip";
+    sectionSequential.classList.toggle("hidden", s.centered);
+    sectionCentered.classList.toggle("hidden", !s.centered);
+
+    document.getElementById("stepsValue").textContent = s.steps;
+
+    equalSidesBox.classList.toggle("checked", s.equalSides);
+    equalSidesBox.innerHTML = s.equalSides ? "&#10003;" : "";
+    equalSidesHint.textContent = s.equalSides ? "same count both ways" : "custom up/down";
+    sectionEqual.classList.toggle("hidden", !s.equalSides);
+    sectionCustom.classList.toggle("hidden", s.equalSides);
+
+    document.getElementById("eachSideLabel").textContent = "Steps each side (" + s.stepsEachSide + ")";
+    document.getElementById("eachSideValue").textContent = s.stepsEachSide;
+    document.getElementById("downLabel").textContent = "Steps down (" + s.stepsDown + ")";
+    document.getElementById("downValue").textContent = s.stepsDown;
+    document.getElementById("upLabel").textContent = "Steps up (" + s.stepsUp + ")";
+    document.getElementById("upValue").textContent = s.stepsUp;
+
+    var rows = computeStripRows();
+    var body = document.getElementById("stripTableBody");
+    var html = "";
+    rows.forEach(function (r, idx) {
+      var indistinguishable = idx !== 0 && r.interval <= 0;
+      var isFlash = flashIndex === r.index;
+      html += '<button class="row-btn' + (isFlash ? " flash" : "") + '" data-index="' + r.index + '" data-time="' + r.time + '">' +
+        '<div class="c-step">' + r.index + '</div>' +
+        '<div class="c-stops">' + formatStops(r.stops) + '</div>' +
+        '<div class="c-add">+' + formatTime(r.interval) + '</div>' +
+        '<div class="c-total">' + formatTime(r.time) + '</div>' +
+      '</button>';
+      if (indistinguishable) {
+        html += '<div class="row-note warning">&#9888; Rounds to the same time as the previous step</div>';
+      }
+      if (r.time < SHORT_TIME_WARNING) {
+        html += '<div class="row-note warning">&#9888; Under ' + SHORT_TIME_WARNING + 's &mdash; hard to hand-time</div>';
+      }
+    });
+    body.innerHTML = html;
+
+    body.querySelectorAll(".row-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var idx = parseFloat(btn.getAttribute("data-index"));
+        var time = parseFloat(btn.getAttribute("data-time"));
+        state.offset.baseTime = time;
+        offsetBaseTimeEl.value = time;
+        refreshOffset();
+        flashIndex = idx;
+        refreshStrip();
+        clearTimeout(flashTimer);
+        flashTimer = setTimeout(function () { flashIndex = null; refreshStrip(); }, 500);
+      });
+    });
+  }
+
+  // ===== OFFSET TAB =====
+  var offsetBaseTimeEl = document.getElementById("offsetBaseTime");
+  var offsetBaseWarningEl = document.getElementById("offsetBaseWarning");
+
+  offsetBaseTimeEl.addEventListener("input", function () {
+    var v = parseFloat(offsetBaseTimeEl.value);
+    state.offset.baseTime = isNaN(v) ? 0 : v;
+    refreshOffset();
+  });
+  offsetIncrementSel.addEventListener("change", function () {
+    state.offset.increment = parseFloat(offsetIncrementSel.value);
+    refreshOffset();
+  });
+
+  bindHold(document.getElementById("offsetMinus"), function () {
+    state.offset.count -= 1; refreshOffset();
+  });
+  bindHold(document.getElementById("offsetPlus"), function () {
+    state.offset.count += 1; refreshOffset();
+  });
+  document.getElementById("offsetReset").addEventListener("click", function () {
+    state.offset.count = 0; refreshOffset();
+  });
+
+  function refreshOffset() {
+    var o = state.offset;
+    var baseInvalid = !o.baseTime || o.baseTime <= 0;
+    offsetBaseTimeEl.classList.toggle("invalid", baseInvalid);
+    offsetBaseWarningEl.classList.toggle("hidden", !baseInvalid);
+
+    var safeBase = o.baseTime > 0 ? o.baseTime : MIN_BASE_TIME;
+    var roundedBase = roundTime(safeBase, state.roundMode);
+    var stops = o.count * o.increment;
+    var resultTime = roundTime(timeForStops(safeBase, stops), state.roundMode);
+    var delta = resultTime - roundedBase;
+    var actionTime = o.count === 0 ? roundedBase : Math.abs(delta);
+    var isShort = o.count !== 0 && actionTime < SHORT_TIME_WARNING;
+
+    var incLabel = INCREMENTS.filter(function (i) { return i.value === o.increment; })[0];
+    document.getElementById("offsetStopsLabel").textContent =
+      formatStops(stops) + " stop" + (Math.abs(stops) !== 1 ? "s" : "");
+    document.getElementById("offsetCountLabel").textContent =
+      (o.count >= 0 ? "+" : "\u2212") + Math.abs(o.count) + " \u00d7 " + (incLabel ? incLabel.label : "");
+
+    document.getElementById("offsetReset").classList.toggle("hidden", o.count === 0);
+
+    var label = o.count === 0 ? "Base exposure" : (o.count > 0 ? "Burn \u2014 additional time after base" : "Dodge \u2014 time to hold back");
+    document.getElementById("resultLabel").textContent = label;
+    document.getElementById("resultTime").textContent = formatTime(actionTime);
+
+    var secondary = document.getElementById("resultSecondary");
+    if (o.count !== 0) {
+      secondary.textContent = "total " + formatTime(resultTime) + " vs base " + formatTime(roundedBase);
+      secondary.classList.remove("hidden");
+    } else {
+      secondary.classList.add("hidden");
+    }
+    document.getElementById("resultWarning").classList.toggle("hidden", !isShort);
+  }
+
+  // ===== rounding (shared) =====
+  document.getElementById("roundMode").addEventListener("change", function (e) {
+    state.roundMode = e.target.value;
+    refreshStrip();
+    refreshOffset();
+  });
+
+  // ===== tabs =====
+  var tabStripBtn = document.getElementById("tabStripBtn");
+  var tabOffsetBtn = document.getElementById("tabOffsetBtn");
+  var panelStrip = document.getElementById("panelStrip");
+  var panelOffset = document.getElementById("panelOffset");
+
+  tabStripBtn.addEventListener("click", function () {
+    tabStripBtn.classList.add("active");
+    tabOffsetBtn.classList.remove("active");
+    panelStrip.classList.remove("hidden");
+    panelOffset.classList.add("hidden");
+  });
+  tabOffsetBtn.addEventListener("click", function () {
+    tabOffsetBtn.classList.add("active");
+    tabStripBtn.classList.remove("active");
+    panelOffset.classList.remove("hidden");
+    panelStrip.classList.add("hidden");
+  });
+
+  // initial render
+  refreshStrip();
+  refreshOffset();
+})();
+</script>
+</body>
+</html>
