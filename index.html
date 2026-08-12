@@ -431,7 +431,7 @@
       html += '<button class="row-btn' + (isFlash ? " flash" : "") + '" data-index="' + r.index + '" data-time="' + r.time + '">' +
         '<div class="c-step">' + r.index + '</div>' +
         '<div class="c-stops">' + formatStops(r.stops) + '</div>' +
-        '<div class="c-add">+' + formatTime(r.interval) + '</div>' +
+        '<div class="c-add">' + (idx === 0 ? "" : "+") + formatTime(r.interval) + '</div>' +
         '<div class="c-total">' + formatTime(r.time) + '</div>' +
       '</button>';
       if (indistinguishable) {
