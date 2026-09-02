@@ -905,11 +905,55 @@
     panelOffset.classList.toggle("hidden", name !== "offset");
     panelTimer.classList.toggle("hidden", name !== "timer");
     roundingField.classList.toggle("hidden", name === "timer");
+    currentTab = name;
   }
 
   tabStripBtn.addEventListener("click", function () { showTab("strip"); });
   tabOffsetBtn.addEventListener("click", function () { showTab("offset"); });
   tabTimerBtn.addEventListener("click", function () { showTab("timer"); });
+
+  // ===== swipe between tabs =====
+  var TAB_ORDER = ["strip", "offset", "timer"];
+  var currentTab = "strip";
+  var swipeStartX = null;
+  var swipeStartY = null;
+  var swipeTracking = false;
+
+  var appEl = document.getElementById("app");
+
+  appEl.addEventListener("touchstart", function (e) {
+    if (e.touches.length !== 1) return;
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeTracking = true;
+  }, { passive: true });
+
+  appEl.addEventListener("touchmove", function (e) {
+    if (!swipeTracking || e.touches.length !== 1) return;
+    var dx = e.touches[0].clientX - swipeStartX;
+    var dy = e.touches[0].clientY - swipeStartY;
+    // once a swipe is clearly horizontal, stop the page from also trying to rubber-band sideways
+    if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  appEl.addEventListener("touchend", function (e) {
+    if (!swipeTracking) return;
+    swipeTracking = false;
+    var touch = e.changedTouches[0];
+    var dx = touch.clientX - swipeStartX;
+    var dy = touch.clientY - swipeStartY;
+    var SWIPE_THRESHOLD = 60;
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+    var idx = TAB_ORDER.indexOf(currentTab);
+    if (dx < 0 && idx < TAB_ORDER.length - 1) {
+      showTab(TAB_ORDER[idx + 1]);
+    } else if (dx > 0 && idx > 0) {
+      showTab(TAB_ORDER[idx - 1]);
+    }
+  });
 
   // initial render
   refreshStrip();
