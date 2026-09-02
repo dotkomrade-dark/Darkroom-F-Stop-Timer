@@ -54,6 +54,7 @@
   .stepper button:active { background: rgba(127,29,29,0.6); }
   .stepper .val { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--red-400); }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px; background: rgba(69,10,10,0.3); border: 1px solid rgba(127,29,29,0.6); border-radius: 10px; }
   .tab-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 6px; border: none; background: none; color: var(--red-800); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; font-family: inherit; }
   .tab-btn.active { background: rgba(127,29,29,0.6); color: var(--red-500); }
@@ -86,7 +87,7 @@
   .offset-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0; }
   .offset-stops { font-size: 24px; color: var(--red-400); }
   .offset-count { font-size: 11px; color: var(--red-800); margin-top: 2px; }
-  .preset-btn { padding: 16px; border: 2px solid rgba(127,0,0,0.7); border-radius: 6px; background: rgba(69,0,0,0.3); color: var(--red-500); font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer; }
+  .preset-btn { padding: 20px; border: 2px solid rgba(127,0,0,0.7); border-radius: 6px; background: rgba(69,0,0,0.3); color: var(--red-500); font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; }
   .preset-btn:active { background: rgba(127,0,0,0.6); }
   .preset-btn.active { border-color: var(--red-500); background: rgba(127,0,0,0.6); }
   .control-btn { padding: 12px; border: 2px solid rgba(127,0,0,0.7); border-radius: 6px; background: rgba(69,0,0,0.25); color: var(--red-500); font-family: inherit; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
@@ -241,15 +242,39 @@
 
   <!-- ===== TIMER PANEL ===== -->
   <div class="panel hidden" id="panelTimer">
+    <div class="result-box">
+      <div class="result-label" id="timerStateLabel">Ready</div>
+      <div class="result-time" id="timerReadout">0:00</div>
+      <div class="result-secondary hidden" id="timerTotalLabel"></div>
+      <div class="timer-progress-wrap"><div class="timer-progress-bar" id="timerProgressBar"></div></div>
+    </div>
+
+    <div class="grid-2" style="gap:10px;">
+      <button class="control-btn" id="timerPauseBtn" disabled>Pause</button>
+      <button class="control-btn" id="timerResetBtn" disabled>Reset</button>
+    </div>
+
     <div class="field">
       <label class="label">Quick start</label>
+      <div class="grid-3" id="presetRow" style="grid-template-columns: 1fr; gap:10px;"></div>
+      <p class="footnote" style="margin-top:8px;">Long-press a preset to set your own time.</p>
+    </div>
+
+    <div class="field hidden" id="presetEditor">
+      <label class="label" id="presetEditorLabel">Edit preset</label>
       <div class="grid-2" style="gap:10px;">
-        <button class="preset-btn" data-seconds="30">0:30</button>
-        <button class="preset-btn" data-seconds="90">1:30</button>
-        <button class="preset-btn" data-seconds="120">2:00</button>
-        <button class="preset-btn" data-seconds="180">3:00</button>
-        <button class="preset-btn" data-seconds="240">4:00</button>
-        <button class="preset-btn" data-seconds="300">5:00</button>
+        <div>
+          <label class="label" style="font-size:10px;">Min</label>
+          <input type="number" class="num-input num-input-sm" id="presetEditMin" value="0" min="0" />
+        </div>
+        <div>
+          <label class="label" style="font-size:10px;">Sec</label>
+          <input type="number" class="num-input num-input-sm" id="presetEditSec" value="0" min="0" max="59" />
+        </div>
+      </div>
+      <div class="grid-2" style="gap:10px; margin-top:10px;">
+        <button class="control-btn" id="presetEditSave">Save</button>
+        <button class="control-btn" id="presetEditCancel">Cancel</button>
       </div>
     </div>
 
@@ -273,18 +298,6 @@
       <span class="checkbox-label">Tick sounds</span>
       <span class="checkbox-hint" id="tickMuteHint">on</span>
     </button>
-
-    <div class="result-box">
-      <div class="result-label" id="timerStateLabel">Ready</div>
-      <div class="result-time" id="timerReadout">0:00</div>
-      <div class="result-secondary hidden" id="timerTotalLabel"></div>
-      <div class="timer-progress-wrap"><div class="timer-progress-bar" id="timerProgressBar"></div></div>
-    </div>
-
-    <div class="grid-2" style="gap:10px;">
-      <button class="control-btn" id="timerPauseBtn" disabled>Pause</button>
-      <button class="control-btn" id="timerResetBtn" disabled>Reset</button>
-    </div>
 
     <p class="footnote">Tap a preset to start immediately, or set a custom time and tap Start. The timer keeps running even if you switch tabs. It ticks every 30 seconds, then every second for the final 10, and beeps and vibrates when it finishes &mdash; use the Tick sounds toggle to mute the periodic ticks (the finishing alert still sounds either way).</p>
   </div>
@@ -790,12 +803,86 @@
     hint.textContent = on ? "on" : "muted";
   });
 
-  document.querySelectorAll(".preset-btn").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var secs = parseInt(btn.getAttribute("data-seconds"), 10);
-      startCountdown(secs, btn.getAttribute("data-seconds"));
+  // ===== customizable presets =====
+  var DEFAULT_PRESETS = [30, 90, 180];
+
+  function loadPresets() {
+    try {
+      var raw = localStorage.getItem("fstopTimerPresets");
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length === 3) return arr.map(Number);
+      }
+    } catch (e) { /* storage unavailable, fall through to defaults */ }
+    return DEFAULT_PRESETS.slice();
+  }
+
+  function savePresets() {
+    try { localStorage.setItem("fstopTimerPresets", JSON.stringify(timerPresets)); } catch (e) { /* ignore */ }
+  }
+
+  var timerPresets = loadPresets();
+  var editingPresetIndex = null;
+  var presetEditor = document.getElementById("presetEditor");
+
+  function renderPresetRow() {
+    var row = document.getElementById("presetRow");
+    row.innerHTML = "";
+    timerPresets.forEach(function (secs, idx) {
+      var btn = document.createElement("button");
+      btn.className = "preset-btn";
+      btn.textContent = formatClock(secs);
+      btn.setAttribute("data-seconds", secs);
+
+      var pressTimer = null;
+      var longPressed = false;
+
+      btn.addEventListener("pointerdown", function () {
+        longPressed = false;
+        pressTimer = setTimeout(function () {
+          longPressed = true;
+          if (navigator.vibrate) navigator.vibrate(30);
+          openPresetEditor(idx);
+        }, 550);
+      });
+      btn.addEventListener("pointerup", function () {
+        clearTimeout(pressTimer);
+        if (!longPressed) startCountdown(secs, String(secs));
+      });
+      btn.addEventListener("pointerleave", function () { clearTimeout(pressTimer); });
+      btn.addEventListener("pointercancel", function () { clearTimeout(pressTimer); });
+
+      row.appendChild(btn);
     });
+    refreshTimerUI();
+  }
+
+  function openPresetEditor(idx) {
+    editingPresetIndex = idx;
+    document.getElementById("presetEditorLabel").textContent = "Edit preset " + (idx + 1);
+    document.getElementById("presetEditMin").value = Math.floor(timerPresets[idx] / 60);
+    document.getElementById("presetEditSec").value = timerPresets[idx] % 60;
+    presetEditor.classList.remove("hidden");
+  }
+
+  document.getElementById("presetEditSave").addEventListener("click", function () {
+    if (editingPresetIndex === null) return;
+    var min = parseFloat(document.getElementById("presetEditMin").value) || 0;
+    var sec = parseFloat(document.getElementById("presetEditSec").value) || 0;
+    var total = Math.max(1, Math.round(min * 60 + sec));
+    timerPresets[editingPresetIndex] = total;
+    savePresets();
+    renderPresetRow();
+    presetEditor.classList.add("hidden");
+    editingPresetIndex = null;
   });
+
+  document.getElementById("presetEditCancel").addEventListener("click", function () {
+    presetEditor.classList.add("hidden");
+    editingPresetIndex = null;
+  });
+
+  renderPresetRow();
 
   document.getElementById("customStartBtn").addEventListener("click", function () {
     var min = parseFloat(document.getElementById("customMin").value) || 0;
