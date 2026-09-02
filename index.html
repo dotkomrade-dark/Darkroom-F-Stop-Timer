@@ -245,7 +245,6 @@
     <div class="result-box">
       <div class="result-label" id="timerStateLabel">Ready</div>
       <div class="result-time" id="timerReadout">0:00</div>
-      <div class="result-secondary hidden" id="timerTotalLabel"></div>
       <div class="timer-progress-wrap"><div class="timer-progress-bar" id="timerProgressBar"></div></div>
     </div>
 
@@ -635,7 +634,6 @@
 
   var timerReadoutEl = document.getElementById("timerReadout");
   var timerStateLabelEl = document.getElementById("timerStateLabel");
-  var timerTotalLabelEl = document.getElementById("timerTotalLabel");
   var timerProgressBarEl = document.getElementById("timerProgressBar");
   var timerPauseBtn = document.getElementById("timerPauseBtn");
   var timerResetBtn = document.getElementById("timerResetBtn");
@@ -648,13 +646,6 @@
     else if (timerState.paused) label = "Paused";
     else if (timerState.totalSeconds > 0 && timerState.remaining <= 0) label = "Done";
     timerStateLabelEl.textContent = label;
-
-    if (timerState.totalSeconds > 0) {
-      timerTotalLabelEl.textContent = "of " + formatClock(timerState.totalSeconds);
-      timerTotalLabelEl.classList.remove("hidden");
-    } else {
-      timerTotalLabelEl.classList.add("hidden");
-    }
 
     var pct = timerState.totalSeconds > 0
       ? Math.min(100, Math.max(0, ((timerState.totalSeconds - timerState.remaining) / timerState.totalSeconds) * 100))
