@@ -1,964 +1,2230 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<meta name="theme-color" content="#000000" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-<meta name="mobile-web-app-capable" content="yes" />
-<link rel="manifest" href="manifest.webmanifest" />
-<link rel="icon" href="icon-192.png" />
-<link rel="apple-touch-icon" href="icon-192.png" />
-<title>F-Stop Timer</title>
-<style>
-  :root {
-    --red-950:#450000; --red-900:#7f0000; --red-800:#990000; --red-700:#b90000;
-    --red-600:#dc0000; --red-500:#ef0000; --red-400:#f80000;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0; background: #000; color: var(--red-400);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    -webkit-user-select: none; user-select: none;
-  }
-  input, select { user-select: text; -webkit-user-select: text; }
-  #app { max-width: 440px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 20px; }
-  header { display: flex; align-items: center; justify-content: center; gap: 10px; }
-  header h1 { font-size: 20px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red-500); margin: 0; font-weight: 700; }
-  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--red-700); font-weight: 700; display: block; margin-bottom: 6px; }
-  .field { display: flex; flex-direction: column; }
-  .num-wrap { position: relative; }
-  .num-input {
-    width: 100%; background: #000; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px;
-    padding: 10px 12px; font-size: 24px; font-family: inherit; color: var(--red-400);
-    outline: none; letter-spacing: 0.02em;
-  }
-  .num-input:focus { border-color: var(--red-500); }
-  .num-input.invalid { border-color: var(--red-600); }
-  .num-suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--red-800); font-size: 14px; }
-  select.sel {
-    width: 100%; background: #000; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px;
-    padding: 10px 12px; font-size: 20px; font-family: inherit; color: var(--red-400); outline: none;
-    -webkit-appearance: none; appearance: none;
-  }
-  select.sel:focus { border-color: var(--red-500); }
-  .warning { display: flex; align-items: center; gap: 6px; color: var(--red-500); font-size: 12px; font-weight: 700; margin-top: 6px; }
-  .checkbox-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; background: none; border: none; width: 100%; text-align: left; cursor: pointer; }
-  .checkbox-box { width: 20px; height: 20px; flex-shrink: 0; border-radius: 3px; border: 2px solid var(--red-800); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #000; }
-  .checkbox-box.checked { background: var(--red-600); border-color: var(--red-600); font-weight: 900; }
-  .checkbox-label { flex: 1; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--red-500); }
-  .checkbox-hint { font-size: 12px; color: var(--red-700); }
-  .stepper { display: flex; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; overflow: hidden; }
-  .stepper button { flex: 0 0 auto; background: rgba(69,10,10,0.4); border: none; color: var(--red-500); font-size: 20px; padding: 0 18px; touch-action: none; cursor: pointer; }
-  .stepper button:active { background: rgba(127,29,29,0.6); }
-  .stepper .val { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--red-400); }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px; background: rgba(69,10,10,0.3); border: 1px solid rgba(127,29,29,0.6); border-radius: 10px; }
-  .tab-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 6px; border: none; background: none; color: var(--red-800); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; font-family: inherit; }
-  .tab-btn.active { background: rgba(127,29,29,0.6); color: var(--red-500); }
-  .panel { display: flex; flex-direction: column; gap: 20px; }
-  .panel.hidden { display: none; }
-  table.strip-table { width: 100%; border-collapse: collapse; }
-  .table-wrap { border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; overflow: hidden; }
-  .table-head { display: grid; grid-template-columns: 1fr 1.4fr 1.6fr 1.4fr; background: rgba(69,10,10,0.5); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--red-600); font-weight: 700; }
-  .table-head div { padding: 8px 10px; }
-  .table-head div:nth-child(3), .table-head div:nth-child(4) { text-align: right; }
-  .row-btn { display: grid; grid-template-columns: 1fr 1.4fr 1.6fr 1.4fr; width: 100%; background: none; border: none; border-top: 1px solid rgba(127,29,29,0.4); text-align: left; cursor: pointer; font-family: inherit; padding: 0; }
-  .row-btn:first-child { border-top: none; }
-  .row-btn.flash { background: rgba(127,29,29,0.5); }
-  .row-btn div { padding: 10px; }
-  .row-btn .c-step { color: var(--red-500); }
-  .row-btn .c-stops { color: var(--red-700); font-size: 13px; }
-  .row-btn .c-add { text-align: right; font-size: 18px; color: var(--red-400); }
-  .row-btn .c-total { text-align: right; font-size: 13px; color: var(--red-700); }
-  .row-note { padding: 0 10px 8px; border-top: none; }
-  .footnote { font-size: 12px; color: var(--red-800); line-height: 1.5; margin: 0; }
-  .instruction { font-size: 14px; color: var(--red-400); line-height: 1.5; margin: 0; font-weight: 600; }
-  .result-box { border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(69,10,10,0.2); }
-  .result-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--red-700); font-weight: 700; text-align: center; }
-  .result-time { font-size: 48px; color: var(--red-400); line-height: 1.1; }
-  #timerReadout { font-size: 96px; line-height: 1; }
-  .result-secondary { font-size: 13px; color: var(--red-700); }
-  .reset-btn { align-self: flex-start; background: none; border: none; border-bottom: 1px solid rgba(127,29,29,0.6); color: var(--red-800); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; padding: 0 0 2px; cursor: pointer; font-family: inherit; }
-  .offset-row { display: flex; align-items: stretch; border: 2px solid rgba(127,29,29,0.7); border-radius: 6px; overflow: hidden; }
-  .offset-row button { flex: 0 0 auto; background: rgba(69,10,10,0.4); border: none; color: var(--red-500); font-size: 22px; padding: 0 20px; touch-action: none; cursor: pointer; }
-  .offset-row button:active { background: rgba(127,29,29,0.6); }
-  .offset-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0; }
-  .offset-stops { font-size: 24px; color: var(--red-400); }
-  .offset-count { font-size: 11px; color: var(--red-800); margin-top: 2px; }
-  .preset-btn { padding: 20px; border: 2px solid rgba(127,0,0,0.7); border-radius: 6px; background: rgba(69,0,0,0.3); color: var(--red-500); font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; }
-  .preset-btn:active { background: rgba(127,0,0,0.6); }
-  .preset-btn.active { border-color: var(--red-500); background: rgba(127,0,0,0.6); }
-  .control-btn { padding: 12px; border: 2px solid rgba(127,0,0,0.7); border-radius: 6px; background: rgba(69,0,0,0.25); color: var(--red-500); font-family: inherit; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
-  .control-btn:active { background: rgba(127,0,0,0.6); }
-  .control-btn:disabled { opacity: 0.35; cursor: default; }
-  .num-input-sm { font-size: 20px; padding: 8px 10px; }
-  .timer-progress-wrap { width: 100%; height: 6px; background: rgba(69,0,0,0.5); border-radius: 3px; margin-top: 16px; overflow: hidden; }
-  .timer-progress-bar { height: 100%; background: var(--red-500); width: 0%; }
-  @keyframes pulseComplete { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  .timer-complete { animation: pulseComplete 0.9s ease-in-out 4; }
-  .hidden { display: none !important; }
-</style>
-</head>
-<body>
-<div id="app">
-  <header>
-    <span style="font-size:20px;">&#9201;</span>
-    <h1>F-Stop Timer</h1>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <title>F-Stop Timer</title>
+    <style>
+      :root {
+        --red-950: #450000;
+        --red-900: #7f0000;
+        --red-800: #990000;
+        --red-700: #b90000;
+        --red-600: #dc0000;
+        --red-500: #ef0000;
+        --red-400: #f80000;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        color: var(--red-400);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      input,
+      select {
+        user-select: text;
+        -webkit-user-select: text;
+      }
+      #app {
+        max-width: 440px;
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+      header h1 {
+        font-size: 20px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--red-500);
+        margin: 0;
+        font-weight: 700;
+      }
+      .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--red-700);
+        font-weight: 700;
+        display: block;
+        margin-bottom: 6px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+      }
+      .num-wrap {
+        position: relative;
+      }
+      .num-input {
+        width: 100%;
+        background: #000;
+        border: 2px solid rgba(127, 29, 29, 0.7);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 24px;
+        font-family: inherit;
+        color: var(--red-400);
+        outline: none;
+        letter-spacing: 0.02em;
+      }
+      .num-input:focus {
+        border-color: var(--red-500);
+      }
+      .num-input.invalid {
+        border-color: var(--red-600);
+      }
+      .num-suffix {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--red-800);
+        font-size: 14px;
+      }
+      select.sel {
+        width: 100%;
+        background: #000;
+        border: 2px solid rgba(127, 29, 29, 0.7);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 20px;
+        font-family: inherit;
+        color: var(--red-400);
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      select.sel:focus {
+        border-color: var(--red-500);
+      }
+      .warning {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--red-500);
+        font-size: 12px;
+        font-weight: 700;
+        margin-top: 6px;
+      }
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 0;
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+      }
+      .checkbox-box {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        border-radius: 3px;
+        border: 2px solid var(--red-800);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        color: #000;
+      }
+      .checkbox-box.checked {
+        background: var(--red-600);
+        border-color: var(--red-600);
+        font-weight: 900;
+      }
+      .checkbox-label {
+        flex: 1;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--red-500);
+      }
+      .checkbox-hint {
+        font-size: 12px;
+        color: var(--red-700);
+      }
+      .stepper {
+        display: flex;
+        border: 2px solid rgba(127, 29, 29, 0.7);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .stepper button {
+        flex: 0 0 auto;
+        background: rgba(69, 10, 10, 0.4);
+        border: none;
+        color: var(--red-500);
+        font-size: 20px;
+        padding: 0 18px;
+        touch-action: none;
+        cursor: pointer;
+      }
+      .stepper button:active {
+        background: rgba(127, 29, 29, 0.6);
+      }
+      .stepper .val {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: var(--red-400);
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+      }
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 4px;
+        background: rgba(69, 10, 10, 0.3);
+        border: 1px solid rgba(127, 29, 29, 0.6);
+        border-radius: 10px;
+      }
+      .tab-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 6px;
+        border: none;
+        background: none;
+        color: var(--red-800);
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .tab-btn.active {
+        background: rgba(127, 29, 29, 0.6);
+        color: var(--red-500);
+      }
+      .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .panel.hidden {
+        display: none;
+      }
+      table.strip-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .table-wrap {
+        border: 2px solid rgba(127, 29, 29, 0.7);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .table-head {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr 1.6fr 1.4fr;
+        background: rgba(69, 10, 10, 0.5);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--red-600);
+        font-weight: 700;
+      }
+      .table-head div {
+        padding: 8px 10px;
+      }
+      .table-head div:nth-child(3),
+      .table-head div:nth-child(4) {
+        text-align: right;
+      }
+      .row-btn {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr 1.6fr 1.4fr;
+        width: 100%;
+        background: none;
+        border: none;
+        border-top: 1px solid rgba(127, 29, 29, 0.4);
+        text-align: left;
+        cursor: pointer;
+        font-family: inherit;
+        padding: 0;
+      }
+      .row-btn:first-child {
+        border-top: none;
+      }
+      .row-btn.flash {
+        background: rgba(127, 29, 29, 0.5);
+      }
+      .row-btn div {
+        padding: 10px;
+      }
+      .row-btn .c-step {
+        color: var(--red-500);
+      }
+      .row-btn .c-stops {
+        color: var(--red-700);
+        font-size: 13px;
+      }
+      .row-btn .c-add {
+        text-align: right;
+        font-size: 18px;
+        color: var(--red-400);
+      }
+      .row-btn .c-total {
+        text-align: right;
+        font-size: 13px;
+        color: var(--red-700);
+      }
+      .row-note {
+        padding: 0 10px 8px;
+        border-top: none;
+      }
+      .footnote {
+        font-size: 12px;
+        color: var(--red-800);
+        line-height: 1.5;
+        margin: 0;
+      }
+      .instruction {
+        font-size: 14px;
+        color: var(--red-400);
+        line-height: 1.5;
+        margin: 0;
+        font-weight: 600;
+      }
+      .result-box {
+        border: 2px solid rgba(127, 29, 29, 0.7);
+        border-radius: 6px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        background: rgba(69, 10, 10, 0.2);
+      }
+      .result-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        color: var(--red-700);
+        font-weight: 700;
+        text-align: center;
+      }
+      .result-time {
+        font-size: 48px;
+        color: var(--red-400);
+        line-height: 1.1;
+      }
+      #timerReadout {
+        font-size: 96px;
+        line-height: 1;
+      }
+      .result-secondary {
+        font-size: 13px;
+        color: var(--red-700);
+      }
+      .reset-btn {
+        align-self: flex-start;
+        background: none;
+        border: none;
+        border-bottom: 1px solid rgba(127, 29, 29, 0.6);
+        color: var(--red-800);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0 0 2px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .offset-row {
+        display: flex;
+        align-items: stretch;
+        border: 2px solid rgba(127, 29, 29, 0.7);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .offset-row button {
+        flex: 0 0 auto;
+        background: rgba(69, 10, 10, 0.4);
+        border: none;
+        color: var(--red-500);
+        font-size: 22px;
+        padding: 0 20px;
+        touch-action: none;
+        cursor: pointer;
+      }
+      .offset-row button:active {
+        background: rgba(127, 29, 29, 0.6);
+      }
+      .offset-center {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 0;
+      }
+      .offset-stops {
+        font-size: 24px;
+        color: var(--red-400);
+      }
+      .offset-count {
+        font-size: 11px;
+        color: var(--red-800);
+        margin-top: 2px;
+      }
+      .preset-btn {
+        padding: 20px;
+        border: 2px solid rgba(127, 0, 0, 0.7);
+        border-radius: 6px;
+        background: rgba(69, 0, 0, 0.3);
+        color: var(--red-500);
+        font-family: inherit;
+        font-size: 22px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .preset-btn:active {
+        background: rgba(127, 0, 0, 0.6);
+      }
+      .preset-btn.active {
+        border-color: var(--red-500);
+        background: rgba(127, 0, 0, 0.6);
+      }
+      .control-btn {
+        padding: 12px;
+        border: 2px solid rgba(127, 0, 0, 0.7);
+        border-radius: 6px;
+        background: rgba(69, 0, 0, 0.25);
+        color: var(--red-500);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+      }
+      .control-btn:active {
+        background: rgba(127, 0, 0, 0.6);
+      }
+      .control-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      .num-input-sm {
+        font-size: 20px;
+        padding: 8px 10px;
+      }
+      .timer-progress-wrap {
+        width: 100%;
+        height: 6px;
+        background: rgba(69, 0, 0, 0.5);
+        border-radius: 3px;
+        margin-top: 16px;
+        overflow: hidden;
+      }
+      .timer-progress-bar {
+        height: 100%;
+        background: var(--red-500);
+        width: 0%;
+      }
+      @keyframes pulseComplete {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.25;
+        }
+      }
+      .timer-complete {
+        animation: pulseComplete 0.9s ease-in-out 4;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .stage-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        border-top: 1px solid rgba(127, 29, 29, 0.4);
+        padding: 10px;
+      }
+      .stage-row:first-child {
+        border-top: none;
+      }
+      .stage-play {
+        background: rgba(127, 0, 0, 0.35);
+        border: 2px solid rgba(127, 0, 0, 0.7);
+        border-radius: 6px;
+        color: var(--red-400);
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 8px 10px;
+      }
+      .stage-play:active {
+        background: rgba(127, 0, 0, 0.65);
+      }
+      .stage-name-btn {
+        background: none;
+        border: none;
+        color: var(--red-400);
+        font-family: inherit;
+        text-align: left;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .stage-name-btn .n {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--red-500);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .stage-name-btn .d {
+        font-size: 12px;
+        color: var(--red-700);
+      }
+      .stage-time {
+        font-size: 14px;
+        color: var(--red-400);
+        white-space: nowrap;
+      }
+      .stage-del {
+        background: none;
+        border: none;
+        color: var(--red-800);
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 6px;
+      }
+      .stage-del:active {
+        color: var(--red-500);
+      }
+      .stage-empty {
+        padding: 14px 10px;
+        font-size: 12px;
+        color: var(--red-800);
+        text-align: center;
+      }
+      .seq-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        border-top: 1px solid rgba(127, 29, 29, 0.4);
+        padding: 10px;
+        cursor: pointer;
+      }
+      .seq-row:first-child {
+        border-top: none;
+      }
+      .seq-row:active {
+        background: rgba(127, 29, 29, 0.3);
+      }
+      .seq-num {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid var(--red-800);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        color: var(--red-700);
+        flex-shrink: 0;
+      }
+      .seq-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .seq-info .n {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--red-500);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .seq-info .d {
+        font-size: 12px;
+        color: var(--red-700);
+      }
+      .seq-time {
+        font-size: 14px;
+        color: var(--red-400);
+        white-space: nowrap;
+      }
+      .seq-row.done {
+        opacity: 0.4;
+      }
+      .seq-row.done .seq-num {
+        background: var(--red-800);
+        border-color: var(--red-800);
+        color: #000;
+      }
+      .seq-row.active,
+      .seq-row.ready {
+        background: rgba(127, 29, 29, 0.45);
+      }
+      .seq-row.active .seq-num,
+      .seq-row.ready .seq-num {
+        background: var(--red-600);
+        border-color: var(--red-600);
+        color: #000;
+        font-weight: 900;
+      }
+      .save-stage-row {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+      }
+      .save-stage-row .num-wrap {
+        flex: 1;
+      }
+      .save-stage-row .control-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <span style="font-size: 20px">&#9201;</span>
+        <h1>F-Stop Timer</h1>
+      </header>
 
-  <div class="tabs" style="grid-template-columns: 1fr 1fr 1fr;">
-    <button class="tab-btn active" id="tabStripBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><path d="M9 2v6.5L4.5 17a3 3 0 0 0 2.6 4.5h9.8a3 3 0 0 0 2.6-4.5L15 8.5V2"/><path d="M9 2h6"/><path d="M6.5 14h11"/></svg>Test strip</button>
-    <button class="tab-btn" id="tabOffsetBtn">&#9878; Dodge / burn</button>
-    <button class="tab-btn" id="tabTimerBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:4px;"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 1h6"/></svg>Timer</button>
-  </div>
-
-  <!-- ===== TEST STRIP PANEL ===== -->
-  <div class="panel" id="panelStrip">
-    <div class="field">
-      <label class="label">Base time</label>
-      <div class="num-wrap">
-        <input type="number" step="0.1" class="num-input" id="stripBaseTime" value="8" />
-        <span class="num-suffix">sec</span>
+      <div class="tabs" style="grid-template-columns: 1fr 1fr 1fr">
+        <button class="tab-btn active" id="tabStripBtn">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="vertical-align: -3px; margin-right: 4px"
+          >
+            <path
+              d="M9 2v6.5L4.5 17a3 3 0 0 0 2.6 4.5h9.8a3 3 0 0 0 2.6-4.5L15 8.5V2"
+            />
+            <path d="M9 2h6" />
+            <path d="M6.5 14h11" /></svg
+          >Test strip
+        </button>
+        <button class="tab-btn" id="tabOffsetBtn">&#9878; Dodge / burn</button>
+        <button class="tab-btn" id="tabTimerBtn">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="vertical-align: -3px; margin-right: 4px"
+          >
+            <circle cx="12" cy="13" r="8" />
+            <path d="M12 9v4l3 2" />
+            <path d="M9 1h6" /></svg
+          >Timer
+        </button>
       </div>
-      <div class="warning hidden" id="stripBaseWarning">&#9888; Enter a time above 0 &mdash; using 0.1s for now</div>
-    </div>
 
-    <div class="field">
-      <label class="label">Increment</label>
-      <select class="sel" id="stripIncrement"></select>
-    </div>
-
-    <button class="checkbox-row" id="centeredCheckbox">
-      <span class="checkbox-box" id="centeredBox"></span>
-      <span class="checkbox-label">Centered on base time</span>
-      <span class="checkbox-hint" id="centeredHint">base = first strip</span>
-    </button>
-
-    <div id="sectionSequential" class="field">
-      <label class="label">Steps</label>
-      <div class="stepper">
-        <button id="stepsMinus">&minus;</button>
-        <div class="val" id="stepsValue">7</div>
-        <button id="stepsPlus">+</button>
-      </div>
-    </div>
-
-    <div id="sectionCentered" class="hidden" style="display:flex; flex-direction:column; gap:12px;">
-      <button class="checkbox-row" id="equalSidesCheckbox">
-        <span class="checkbox-box checked" id="equalSidesBox">&#10003;</span>
-        <span class="checkbox-label">Equal steps both sides</span>
-        <span class="checkbox-hint" id="equalSidesHint">same count both ways</span>
-      </button>
-
-      <div id="sectionEqual" class="field">
-        <label class="label" id="eachSideLabel">Steps each side (2)</label>
-        <div class="stepper">
-          <button id="eachSideMinus">&minus;</button>
-          <div class="val" id="eachSideValue">2</div>
-          <button id="eachSidePlus">+</button>
-        </div>
-      </div>
-
-      <div id="sectionCustom" class="grid-2 hidden">
+      <!-- ===== TEST STRIP PANEL ===== -->
+      <div class="panel" id="panelStrip">
         <div class="field">
-          <label class="label" id="downLabel">Steps down (2)</label>
-          <div class="stepper">
-            <button id="downMinus">&minus;</button>
-            <div class="val" id="downValue">2</div>
-            <button id="downPlus">+</button>
+          <label class="label">Base time</label>
+          <div class="num-wrap">
+            <input
+              type="number"
+              step="0.1"
+              class="num-input"
+              id="stripBaseTime"
+              value="8"
+            />
+            <span class="num-suffix">sec</span>
+          </div>
+          <div class="warning hidden" id="stripBaseWarning">
+            &#9888; Enter a time above 0 &mdash; using 0.1s for now
           </div>
         </div>
+
         <div class="field">
-          <label class="label" id="upLabel">Steps up (2)</label>
+          <label class="label">Increment</label>
+          <select class="sel" id="stripIncrement"></select>
+        </div>
+
+        <button class="checkbox-row" id="centeredCheckbox">
+          <span class="checkbox-box" id="centeredBox"></span>
+          <span class="checkbox-label">Centered on base time</span>
+          <span class="checkbox-hint" id="centeredHint"
+            >base = first strip</span
+          >
+        </button>
+
+        <div id="sectionSequential" class="field">
+          <label class="label">Steps</label>
           <div class="stepper">
-            <button id="upMinus">&minus;</button>
-            <div class="val" id="upValue">2</div>
-            <button id="upPlus">+</button>
+            <button id="stepsMinus">&minus;</button>
+            <div class="val" id="stepsValue">7</div>
+            <button id="stepsPlus">+</button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="table-wrap">
-      <div class="table-head">
-        <div>Step</div><div>Stops</div><div>Exposure Time</div><div>Total time</div>
-      </div>
-      <div id="stripTableBody"></div>
-    </div>
+        <div
+          id="sectionCentered"
+          class="hidden"
+          style="display: flex; flex-direction: column; gap: 12px"
+        >
+          <button class="checkbox-row" id="equalSidesCheckbox">
+            <span class="checkbox-box checked" id="equalSidesBox"
+              >&#10003;</span
+            >
+            <span class="checkbox-label">Equal steps both sides</span>
+            <span class="checkbox-hint" id="equalSidesHint"
+              >same count both ways</span
+            >
+          </button>
 
-    <p class="instruction">Expose one step at a time, starting with the <strong>last</strong> row. The final step will expose the full test strip.</p>
-    <p class="footnote">Tap a row to set it as the base time on the Dodge / Burn tab. "Exposure Time" is the interval to run after covering the previous section. "Total time" is the cumulative exposure for that section.</p>
-  </div>
+          <div id="sectionEqual" class="field">
+            <label class="label" id="eachSideLabel">Steps each side (2)</label>
+            <div class="stepper">
+              <button id="eachSideMinus">&minus;</button>
+              <div class="val" id="eachSideValue">2</div>
+              <button id="eachSidePlus">+</button>
+            </div>
+          </div>
 
-  <!-- ===== OFFSET PANEL ===== -->
-  <div class="panel hidden" id="panelOffset">
-    <div class="field">
-      <label class="label">Base time</label>
-      <div class="num-wrap">
-        <input type="number" step="0.1" class="num-input" id="offsetBaseTime" value="8" />
-        <span class="num-suffix">sec</span>
-      </div>
-      <div class="warning hidden" id="offsetBaseWarning">&#9888; Enter a time above 0 &mdash; using 0.1s for now</div>
-    </div>
-
-    <div class="field">
-      <label class="label">Increment</label>
-      <select class="sel" id="offsetIncrement"></select>
-    </div>
-
-    <div class="field">
-      <label class="label">Mode</label>
-      <div class="tabs" id="modeToggle" style="grid-template-columns: 1fr 1fr;">
-        <button class="tab-btn" id="dodgeBtn">Dodge</button>
-        <button class="tab-btn active" id="burnBtn">Burn</button>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="label">Offset</label>
-      <div class="offset-row">
-        <button id="offsetMinus">&minus;</button>
-        <div class="offset-center">
-          <div class="offset-stops" id="offsetStopsLabel">base stop</div>
-          <div class="offset-count" id="offsetCountLabel">+0 &times; 1/3</div>
+          <div id="sectionCustom" class="grid-2 hidden">
+            <div class="field">
+              <label class="label" id="downLabel">Steps down (2)</label>
+              <div class="stepper">
+                <button id="downMinus">&minus;</button>
+                <div class="val" id="downValue">2</div>
+                <button id="downPlus">+</button>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" id="upLabel">Steps up (2)</label>
+              <div class="stepper">
+                <button id="upMinus">&minus;</button>
+                <div class="val" id="upValue">2</div>
+                <button id="upPlus">+</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <button id="offsetPlus">+</button>
+
+        <div class="table-wrap">
+          <div class="table-head">
+            <div>Step</div>
+            <div>Stops</div>
+            <div>Exposure Time</div>
+            <div>Total time</div>
+          </div>
+          <div id="stripTableBody"></div>
+        </div>
+
+        <p class="instruction">
+          Expose one step at a time, starting with the
+          <strong>last</strong> row. The final step will expose the full test
+          strip.
+        </p>
+        <p class="footnote">
+          Tap a row to set it as the base time on the Dodge / Burn tab.
+          "Exposure Time" is the interval to run after covering the previous
+          section. "Total time" is the cumulative exposure for that section.
+        </p>
+      </div>
+
+      <!-- ===== OFFSET PANEL ===== -->
+      <div class="panel hidden" id="panelOffset">
+        <div class="field">
+          <label class="label">Base time</label>
+          <div class="num-wrap">
+            <input
+              type="number"
+              step="0.1"
+              class="num-input"
+              id="offsetBaseTime"
+              value="8"
+            />
+            <span class="num-suffix">sec</span>
+          </div>
+          <div class="warning hidden" id="offsetBaseWarning">
+            &#9888; Enter a time above 0 &mdash; using 0.1s for now
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">Increment</label>
+          <select class="sel" id="offsetIncrement"></select>
+        </div>
+
+        <div class="field">
+          <label class="label">Mode</label>
+          <div
+            class="tabs"
+            id="modeToggle"
+            style="grid-template-columns: 1fr 1fr"
+          >
+            <button class="tab-btn" id="dodgeBtn">Dodge</button>
+            <button class="tab-btn active" id="burnBtn">Burn</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">Offset</label>
+          <div class="offset-row">
+            <button id="offsetMinus">&minus;</button>
+            <div class="offset-center">
+              <div class="offset-stops" id="offsetStopsLabel">base stop</div>
+              <div class="offset-count" id="offsetCountLabel">
+                +0 &times; 1/3
+              </div>
+            </div>
+            <button id="offsetPlus">+</button>
+          </div>
+        </div>
+
+        <button class="reset-btn hidden" id="offsetReset">Reset to base</button>
+
+        <div class="result-box">
+          <div class="result-label" id="resultLabel">Base exposure</div>
+          <div class="result-time" id="resultTime">8.0s</div>
+          <div class="result-secondary hidden" id="resultSecondary"></div>
+          <div
+            class="warning hidden"
+            id="resultWarning"
+            style="margin-top: 4px"
+          >
+            &#9888; Under 2s &mdash; hard to hand-time
+          </div>
+          <button
+            class="control-btn"
+            id="startOffsetTimerBtn"
+            style="width: 100%; margin-top: 12px"
+          >
+            &#9654; Start timer
+          </button>
+        </div>
+
+        <p class="footnote">
+          Burning happens after the base exposure, so the figure above is the
+          extra time to give that area once the base pass is done. Dodging
+          happens during the base exposure, so the figure above is how long to
+          hold back light on that area within the base pass &mdash; not a
+          separate pass afterwards.
+        </p>
+
+        <div class="field">
+          <label class="label">Save this stage</label>
+          <div class="save-stage-row">
+            <div class="num-wrap">
+              <input
+                type="text"
+                class="num-input"
+                id="stageName"
+                placeholder="e.g. Sky"
+                maxlength="40"
+              />
+            </div>
+            <button class="control-btn" id="saveStageBtn">+ Save</button>
+          </div>
+        </div>
+
+        <div class="field" id="stagesField">
+          <label class="label">Saved stages</label>
+          <div class="table-wrap" id="stagesList"></div>
+        </div>
+      </div>
+
+      <!-- ===== TIMER PANEL ===== -->
+      <div class="panel hidden" id="panelTimer">
+        <div class="result-box">
+          <div class="result-label" id="timerStateLabel">Ready</div>
+          <div class="result-time" id="timerReadout">0:00</div>
+          <div class="timer-progress-wrap">
+            <div class="timer-progress-bar" id="timerProgressBar"></div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="gap: 10px">
+          <button class="control-btn" id="timerPauseBtn" disabled>Pause</button>
+          <button class="control-btn" id="timerResetBtn" disabled>Reset</button>
+        </div>
+
+        <div class="field hidden" id="sequenceField">
+          <label class="label">Print sequence</label>
+          <div class="table-wrap" id="sequenceList"></div>
+          <button
+            class="control-btn hidden"
+            id="sequenceStartBtn"
+            style="width: 100%; margin-top: 10px"
+          >
+            &#9654; Start sequence
+          </button>
+          <p class="footnote" style="margin-top: 8px">
+            Tap a step to load it, then tap Start. When a step finishes, the
+            next one loads automatically &mdash; tap Start when you're ready to
+            run it.
+          </p>
+        </div>
+
+        <div id="basicTimerControls">
+          <div class="field">
+            <label class="label">Quick start</label>
+            <div
+              class="grid-3"
+              id="presetRow"
+              style="grid-template-columns: 1fr; gap: 10px"
+            ></div>
+            <p class="footnote" style="margin-top: 8px">
+              Long-press a preset to set your own time.
+            </p>
+          </div>
+
+          <div class="field hidden" id="presetEditor">
+            <label class="label" id="presetEditorLabel">Edit preset</label>
+            <div class="grid-2" style="gap: 10px">
+              <div>
+                <label class="label" style="font-size: 10px">Min</label>
+                <input
+                  type="number"
+                  class="num-input num-input-sm"
+                  id="presetEditMin"
+                  value="0"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label class="label" style="font-size: 10px">Sec</label>
+                <input
+                  type="number"
+                  class="num-input num-input-sm"
+                  id="presetEditSec"
+                  value="0"
+                  min="0"
+                  max="59"
+                />
+              </div>
+            </div>
+            <div class="grid-2" style="gap: 10px; margin-top: 10px">
+              <button class="control-btn" id="presetEditSave">Save</button>
+              <button class="control-btn" id="presetEditCancel">Cancel</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Custom</label>
+            <div class="grid-2" style="gap: 10px">
+              <div>
+                <label class="label" style="font-size: 10px">Min</label>
+                <input
+                  type="number"
+                  class="num-input num-input-sm"
+                  id="customMin"
+                  value="0"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label class="label" style="font-size: 10px">Sec</label>
+                <input
+                  type="number"
+                  class="num-input num-input-sm"
+                  id="customSec"
+                  value="0"
+                  min="0"
+                  max="59"
+                />
+              </div>
+            </div>
+            <button
+              class="control-btn"
+              id="customStartBtn"
+              style="width: 100%; margin-top: 10px"
+            >
+              Start custom
+            </button>
+          </div>
+
+          <p class="footnote">
+            Tap a preset to start immediately, or set a custom time and tap
+            Start. The timer keeps running even if you switch tabs. It ticks
+            every 30 seconds, then every second for the final 10, and beeps and
+            vibrates when it finishes &mdash; use the Tick sounds toggle to mute
+            the periodic ticks (the finishing alert still sounds either way).
+          </p>
+        </div>
+
+        <button class="checkbox-row" id="tickMuteToggle">
+          <span class="checkbox-box checked" id="tickMuteBox">&#10003;</span>
+          <span class="checkbox-label">Tick sounds</span>
+          <span class="checkbox-hint" id="tickMuteHint">on</span>
+        </button>
+      </div>
+
+      <div class="field" id="roundingField">
+        <label class="label">Rounding</label>
+        <select class="sel" id="roundMode">
+          <option value="off">Off</option>
+          <option value="0.1" selected>0.1s</option>
+          <option value="1">1s</option>
+        </select>
       </div>
     </div>
 
-    <button class="reset-btn hidden" id="offsetReset">Reset to base</button>
+    <script>
+      (function () {
+        "use strict";
 
-    <div class="result-box">
-      <div class="result-label" id="resultLabel">Base exposure</div>
-      <div class="result-time" id="resultTime">8.0s</div>
-      <div class="result-secondary hidden" id="resultSecondary"></div>
-      <div class="warning hidden" id="resultWarning" style="margin-top:4px;">&#9888; Under 2s &mdash; hard to hand-time</div>
-    </div>
+        var INCREMENTS = [
+          { label: "1/12", value: 1 / 12 },
+          { label: "1/6", value: 1 / 6 },
+          { label: "1/5", value: 1 / 5 },
+          { label: "1/4", value: 1 / 4 },
+          { label: "1/3", value: 1 / 3 },
+          { label: "1/2", value: 1 / 2 },
+          { label: "1", value: 1 },
+        ];
+        var SHORT_TIME_WARNING = 2;
+        var MIN_BASE_TIME = 0.1;
 
-    <p class="footnote">Burning happens after the base exposure, so the figure above is the extra time to give that area once the base pass is done. Dodging happens during the base exposure, so the figure above is how long to hold back light on that area within the base pass &mdash; not a separate pass afterwards.</p>
-  </div>
+        function timeForStops(base, stops) {
+          return base * Math.pow(2, stops);
+        }
 
-  <!-- ===== TIMER PANEL ===== -->
-  <div class="panel hidden" id="panelTimer">
-    <div class="result-box">
-      <div class="result-label" id="timerStateLabel">Ready</div>
-      <div class="result-time" id="timerReadout">0:00</div>
-      <div class="timer-progress-wrap"><div class="timer-progress-bar" id="timerProgressBar"></div></div>
-    </div>
+        function roundTime(value, mode) {
+          if (!isFinite(value)) return value;
+          if (mode === "0.1") return Math.round(value * 10) / 10;
+          if (mode === "1") return Math.round(value);
+          return value;
+        }
 
-    <div class="grid-2" style="gap:10px;">
-      <button class="control-btn" id="timerPauseBtn" disabled>Pause</button>
-      <button class="control-btn" id="timerResetBtn" disabled>Reset</button>
-    </div>
+        function formatTime(totalSeconds) {
+          if (!isFinite(totalSeconds) || totalSeconds < 0) return "--";
+          if (totalSeconds < 60)
+            return totalSeconds.toFixed(totalSeconds < 10 ? 2 : 1) + "s";
+          var m = Math.floor(totalSeconds / 60);
+          var s = totalSeconds - m * 60;
+          return m + ":" + s.toFixed(1).padStart(4, "0");
+        }
 
-    <div class="field">
-      <label class="label">Quick start</label>
-      <div class="grid-3" id="presetRow" style="grid-template-columns: 1fr; gap:10px;"></div>
-      <p class="footnote" style="margin-top:8px;">Long-press a preset to set your own time.</p>
-    </div>
+        function formatStops(stops) {
+          if (stops === 0) return "base";
+          var sign = stops > 0 ? "+" : "\u2212";
+          return (
+            sign +
+            Math.abs(stops)
+              .toFixed(3)
+              .replace(/\.?0+$/, "")
+          );
+        }
 
-    <div class="field hidden" id="presetEditor">
-      <label class="label" id="presetEditorLabel">Edit preset</label>
-      <div class="grid-2" style="gap:10px;">
-        <div>
-          <label class="label" style="font-size:10px;">Min</label>
-          <input type="number" class="num-input num-input-sm" id="presetEditMin" value="0" min="0" />
-        </div>
-        <div>
-          <label class="label" style="font-size:10px;">Sec</label>
-          <input type="number" class="num-input num-input-sm" id="presetEditSec" value="0" min="0" max="59" />
-        </div>
-      </div>
-      <div class="grid-2" style="gap:10px; margin-top:10px;">
-        <button class="control-btn" id="presetEditSave">Save</button>
-        <button class="control-btn" id="presetEditCancel">Cancel</button>
-      </div>
-    </div>
+        function escapeHtml(str) {
+          return String(str).replace(/[&<>"']/g, function (c) {
+            return {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[c];
+          });
+        }
 
-    <div class="field">
-      <label class="label">Custom</label>
-      <div class="grid-2" style="gap:10px;">
-        <div>
-          <label class="label" style="font-size:10px;">Min</label>
-          <input type="number" class="num-input num-input-sm" id="customMin" value="0" min="0" />
-        </div>
-        <div>
-          <label class="label" style="font-size:10px;">Sec</label>
-          <input type="number" class="num-input num-input-sm" id="customSec" value="0" min="0" max="59" />
-        </div>
-      </div>
-      <button class="control-btn" id="customStartBtn" style="width:100%; margin-top:10px;">Start custom</button>
-    </div>
+        // ---- state ----
+        var state = {
+          roundMode: "0.1",
+          strip: {
+            baseTime: 8,
+            increment: 1 / 2,
+            steps: 7,
+            centered: false,
+            equalSides: true,
+            stepsEachSide: 2,
+            stepsDown: 2,
+            stepsUp: 2,
+          },
+          offset: {
+            baseTime: 8,
+            increment: 1 / 2,
+            count: 0,
+            mode: "burn",
+            stages: [],
+          },
+        };
 
-    <button class="checkbox-row" id="tickMuteToggle">
-      <span class="checkbox-box checked" id="tickMuteBox">&#10003;</span>
-      <span class="checkbox-label">Tick sounds</span>
-      <span class="checkbox-hint" id="tickMuteHint">on</span>
-    </button>
+        // ---- helpers ----
+        function populateIncrementSelect(sel) {
+          INCREMENTS.forEach(function (inc) {
+            var opt = document.createElement("option");
+            opt.value = inc.value;
+            opt.textContent = inc.label + " Stop";
+            sel.appendChild(opt);
+          });
+        }
+        var stripIncrementSel = document.getElementById("stripIncrement");
+        var offsetIncrementSel = document.getElementById("offsetIncrement");
+        populateIncrementSelect(stripIncrementSel);
+        populateIncrementSelect(offsetIncrementSel);
+        stripIncrementSel.value = state.strip.increment;
+        offsetIncrementSel.value = state.offset.increment;
 
-    <p class="footnote">Tap a preset to start immediately, or set a custom time and tap Start. The timer keeps running even if you switch tabs. It ticks every 30 seconds, then every second for the final 10, and beeps and vibrates when it finishes &mdash; use the Tick sounds toggle to mute the periodic ticks (the finishing alert still sounds either way).</p>
-  </div>
+        function bindHold(el, fn) {
+          var t1 = null,
+            t2 = null;
+          function clear() {
+            clearTimeout(t1);
+            clearInterval(t2);
+          }
+          function start(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            fn();
+            t1 = setTimeout(function () {
+              t2 = setInterval(fn, 90);
+            }, 450);
+          }
+          el.addEventListener("pointerdown", start);
+          el.addEventListener("pointerup", clear);
+          el.addEventListener("pointerleave", clear);
+          el.addEventListener("pointercancel", clear);
+        }
 
-  <div class="field" id="roundingField">
-    <label class="label">Rounding</label>
-    <select class="sel" id="roundMode">
-      <option value="off">Off</option>
-      <option value="0.1" selected>0.1s</option>
-      <option value="1">1s</option>
-    </select>
-  </div>
-</div>
+        // ===== TEST STRIP =====
+        var stripBaseTimeEl = document.getElementById("stripBaseTime");
+        var stripBaseWarningEl = document.getElementById("stripBaseWarning");
 
-<script>
-(function () {
-  "use strict";
+        stripBaseTimeEl.addEventListener("input", function () {
+          var v = parseFloat(stripBaseTimeEl.value);
+          state.strip.baseTime = isNaN(v) ? 0 : v;
+          refreshStrip();
+        });
+        stripIncrementSel.addEventListener("change", function () {
+          state.strip.increment = parseFloat(stripIncrementSel.value);
+          refreshStrip();
+        });
 
-  var INCREMENTS = [
-    { label: "1/12", value: 1/12 }, { label: "1/6", value: 1/6 }, { label: "1/5", value: 1/5 },
-    { label: "1/4", value: 1/4 }, { label: "1/3", value: 1/3 },
-    { label: "1/2", value: 1/2 }, { label: "1", value: 1 }
-  ];
-  var SHORT_TIME_WARNING = 2;
-  var MIN_BASE_TIME = 0.1;
+        var centeredCheckbox = document.getElementById("centeredCheckbox");
+        var centeredBox = document.getElementById("centeredBox");
+        var centeredHint = document.getElementById("centeredHint");
+        var sectionSequential = document.getElementById("sectionSequential");
+        var sectionCentered = document.getElementById("sectionCentered");
 
-  function timeForStops(base, stops) { return base * Math.pow(2, stops); }
+        centeredCheckbox.addEventListener("click", function () {
+          state.strip.centered = !state.strip.centered;
+          refreshStrip();
+        });
 
-  function roundTime(value, mode) {
-    if (!isFinite(value)) return value;
-    if (mode === "0.1") return Math.round(value * 10) / 10;
-    if (mode === "1") return Math.round(value);
-    return value;
-  }
+        bindHold(document.getElementById("stepsMinus"), function () {
+          state.strip.steps = Math.max(1, state.strip.steps - 1);
+          refreshStrip();
+        });
+        bindHold(document.getElementById("stepsPlus"), function () {
+          state.strip.steps = Math.min(21, state.strip.steps + 1);
+          refreshStrip();
+        });
 
-  function formatTime(totalSeconds) {
-    if (!isFinite(totalSeconds) || totalSeconds < 0) return "--";
-    if (totalSeconds < 60) return totalSeconds.toFixed(totalSeconds < 10 ? 2 : 1) + "s";
-    var m = Math.floor(totalSeconds / 60);
-    var s = totalSeconds - m * 60;
-    return m + ":" + s.toFixed(1).padStart(4, "0");
-  }
+        var equalSidesCheckbox = document.getElementById("equalSidesCheckbox");
+        var equalSidesBox = document.getElementById("equalSidesBox");
+        var equalSidesHint = document.getElementById("equalSidesHint");
+        var sectionEqual = document.getElementById("sectionEqual");
+        var sectionCustom = document.getElementById("sectionCustom");
 
-  function formatStops(stops) {
-    if (stops === 0) return "base";
-    var sign = stops > 0 ? "+" : "\u2212";
-    return sign + Math.abs(stops).toFixed(3).replace(/\.?0+$/, "");
-  }
+        equalSidesCheckbox.addEventListener("click", function () {
+          state.strip.equalSides = !state.strip.equalSides;
+          refreshStrip();
+        });
 
-  // ---- state ----
-  var state = {
-    roundMode: "0.1",
-    strip: { baseTime: 8, increment: 1/2, steps: 7, centered: false, equalSides: true, stepsEachSide: 2, stepsDown: 2, stepsUp: 2 },
-    offset: { baseTime: 8, increment: 1/2, count: 0, mode: "burn" }
-  };
+        bindHold(document.getElementById("eachSideMinus"), function () {
+          state.strip.stepsEachSide = Math.max(
+            1,
+            state.strip.stepsEachSide - 1,
+          );
+          refreshStrip();
+        });
+        bindHold(document.getElementById("eachSidePlus"), function () {
+          state.strip.stepsEachSide = Math.min(
+            15,
+            state.strip.stepsEachSide + 1,
+          );
+          refreshStrip();
+        });
+        bindHold(document.getElementById("downMinus"), function () {
+          state.strip.stepsDown = Math.max(0, state.strip.stepsDown - 1);
+          refreshStrip();
+        });
+        bindHold(document.getElementById("downPlus"), function () {
+          state.strip.stepsDown = Math.min(15, state.strip.stepsDown + 1);
+          refreshStrip();
+        });
+        bindHold(document.getElementById("upMinus"), function () {
+          state.strip.stepsUp = Math.max(0, state.strip.stepsUp - 1);
+          refreshStrip();
+        });
+        bindHold(document.getElementById("upPlus"), function () {
+          state.strip.stepsUp = Math.min(15, state.strip.stepsUp + 1);
+          refreshStrip();
+        });
 
-  // ---- helpers ----
-  function populateIncrementSelect(sel) {
-    INCREMENTS.forEach(function (inc) {
-      var opt = document.createElement("option");
-      opt.value = inc.value;
-      opt.textContent = inc.label + " Stop";
-      sel.appendChild(opt);
-    });
-  }
-  var stripIncrementSel = document.getElementById("stripIncrement");
-  var offsetIncrementSel = document.getElementById("offsetIncrement");
-  populateIncrementSelect(stripIncrementSel);
-  populateIncrementSelect(offsetIncrementSel);
-  stripIncrementSel.value = state.strip.increment;
-  offsetIncrementSel.value = state.offset.increment;
+        var flashIndex = null;
+        var flashTimer = null;
 
-  function bindHold(el, fn) {
-    var t1 = null, t2 = null;
-    function clear() { clearTimeout(t1); clearInterval(t2); }
-    function start(e) {
-      if (e && e.preventDefault) e.preventDefault();
-      fn();
-      t1 = setTimeout(function () { t2 = setInterval(fn, 90); }, 450);
-    }
-    el.addEventListener("pointerdown", start);
-    el.addEventListener("pointerup", clear);
-    el.addEventListener("pointerleave", clear);
-    el.addEventListener("pointercancel", clear);
-  }
+        function computeStripRows() {
+          var s = state.strip;
+          var safeBase = s.baseTime > 0 ? s.baseTime : MIN_BASE_TIME;
+          var indices = [];
+          if (!s.centered) {
+            for (var i = 0; i < s.steps; i++) indices.push(i);
+          } else {
+            var down = s.equalSides ? s.stepsEachSide : s.stepsDown;
+            var up = s.equalSides ? s.stepsEachSide : s.stepsUp;
+            for (var j = -down; j <= up; j++) indices.push(j);
+          }
+          var prevTime = null;
+          return indices.map(function (idx) {
+            var stops = idx * s.increment;
+            var rawTime = timeForStops(safeBase, stops);
+            var time = roundTime(rawTime, state.roundMode);
+            var interval = prevTime === null ? time : time - prevTime;
+            prevTime = time;
+            return { index: idx, stops: stops, time: time, interval: interval };
+          });
+        }
 
-  // ===== TEST STRIP =====
-  var stripBaseTimeEl = document.getElementById("stripBaseTime");
-  var stripBaseWarningEl = document.getElementById("stripBaseWarning");
+        function refreshStrip() {
+          var s = state.strip;
+          var baseInvalid = !s.baseTime || s.baseTime <= 0;
+          stripBaseTimeEl.classList.toggle("invalid", baseInvalid);
+          stripBaseWarningEl.classList.toggle("hidden", !baseInvalid);
 
-  stripBaseTimeEl.addEventListener("input", function () {
-    var v = parseFloat(stripBaseTimeEl.value);
-    state.strip.baseTime = isNaN(v) ? 0 : v;
-    refreshStrip();
-  });
-  stripIncrementSel.addEventListener("change", function () {
-    state.strip.increment = parseFloat(stripIncrementSel.value);
-    refreshStrip();
-  });
+          centeredBox.classList.toggle("checked", s.centered);
+          centeredBox.innerHTML = s.centered ? "&#10003;" : "";
+          centeredHint.textContent = s.centered
+            ? "middle = base"
+            : "base = first strip";
+          sectionSequential.classList.toggle("hidden", s.centered);
+          sectionCentered.classList.toggle("hidden", !s.centered);
 
-  var centeredCheckbox = document.getElementById("centeredCheckbox");
-  var centeredBox = document.getElementById("centeredBox");
-  var centeredHint = document.getElementById("centeredHint");
-  var sectionSequential = document.getElementById("sectionSequential");
-  var sectionCentered = document.getElementById("sectionCentered");
+          document.getElementById("stepsValue").textContent = s.steps;
 
-  centeredCheckbox.addEventListener("click", function () {
-    state.strip.centered = !state.strip.centered;
-    refreshStrip();
-  });
+          equalSidesBox.classList.toggle("checked", s.equalSides);
+          equalSidesBox.innerHTML = s.equalSides ? "&#10003;" : "";
+          equalSidesHint.textContent = s.equalSides
+            ? "same count both ways"
+            : "custom up/down";
+          sectionEqual.classList.toggle("hidden", !s.equalSides);
+          sectionCustom.classList.toggle("hidden", s.equalSides);
 
-  bindHold(document.getElementById("stepsMinus"), function () {
-    state.strip.steps = Math.max(1, state.strip.steps - 1); refreshStrip();
-  });
-  bindHold(document.getElementById("stepsPlus"), function () {
-    state.strip.steps = Math.min(21, state.strip.steps + 1); refreshStrip();
-  });
+          document.getElementById("eachSideLabel").textContent =
+            "Steps each side (" + s.stepsEachSide + ")";
+          document.getElementById("eachSideValue").textContent =
+            s.stepsEachSide;
+          document.getElementById("downLabel").textContent =
+            "Steps down (" + s.stepsDown + ")";
+          document.getElementById("downValue").textContent = s.stepsDown;
+          document.getElementById("upLabel").textContent =
+            "Steps up (" + s.stepsUp + ")";
+          document.getElementById("upValue").textContent = s.stepsUp;
 
-  var equalSidesCheckbox = document.getElementById("equalSidesCheckbox");
-  var equalSidesBox = document.getElementById("equalSidesBox");
-  var equalSidesHint = document.getElementById("equalSidesHint");
-  var sectionEqual = document.getElementById("sectionEqual");
-  var sectionCustom = document.getElementById("sectionCustom");
+          var rows = computeStripRows();
+          var body = document.getElementById("stripTableBody");
+          var html = "";
+          rows.forEach(function (r, idx) {
+            var indistinguishable = idx !== 0 && r.interval <= 0;
+            var isFlash = flashIndex === r.index;
+            html +=
+              '<button class="row-btn' +
+              (isFlash ? " flash" : "") +
+              '" data-index="' +
+              r.index +
+              '" data-time="' +
+              r.time +
+              '">' +
+              '<div class="c-step">' +
+              r.index +
+              "</div>" +
+              '<div class="c-stops">' +
+              formatStops(r.stops) +
+              "</div>" +
+              '<div class="c-add">' +
+              (idx === 0 ? "" : "+") +
+              formatTime(r.interval) +
+              "</div>" +
+              '<div class="c-total">' +
+              formatTime(r.time) +
+              "</div>" +
+              "</button>";
+            if (indistinguishable) {
+              html +=
+                '<div class="row-note warning">&#9888; Rounds to the same time as the previous step</div>';
+            }
+            if (r.time < SHORT_TIME_WARNING) {
+              html +=
+                '<div class="row-note warning">&#9888; Under ' +
+                SHORT_TIME_WARNING +
+                "s &mdash; hard to hand-time</div>";
+            }
+          });
+          body.innerHTML = html;
 
-  equalSidesCheckbox.addEventListener("click", function () {
-    state.strip.equalSides = !state.strip.equalSides;
-    refreshStrip();
-  });
+          body.querySelectorAll(".row-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var idx = parseFloat(btn.getAttribute("data-index"));
+              var time = parseFloat(btn.getAttribute("data-time"));
+              state.offset.baseTime = time;
+              offsetBaseTimeEl.value = time;
+              refreshOffset();
+              flashIndex = idx;
+              refreshStrip();
+              clearTimeout(flashTimer);
+              flashTimer = setTimeout(function () {
+                flashIndex = null;
+                refreshStrip();
+              }, 500);
+            });
+          });
+        }
 
-  bindHold(document.getElementById("eachSideMinus"), function () {
-    state.strip.stepsEachSide = Math.max(1, state.strip.stepsEachSide - 1); refreshStrip();
-  });
-  bindHold(document.getElementById("eachSidePlus"), function () {
-    state.strip.stepsEachSide = Math.min(15, state.strip.stepsEachSide + 1); refreshStrip();
-  });
-  bindHold(document.getElementById("downMinus"), function () {
-    state.strip.stepsDown = Math.max(0, state.strip.stepsDown - 1); refreshStrip();
-  });
-  bindHold(document.getElementById("downPlus"), function () {
-    state.strip.stepsDown = Math.min(15, state.strip.stepsDown + 1); refreshStrip();
-  });
-  bindHold(document.getElementById("upMinus"), function () {
-    state.strip.stepsUp = Math.max(0, state.strip.stepsUp - 1); refreshStrip();
-  });
-  bindHold(document.getElementById("upPlus"), function () {
-    state.strip.stepsUp = Math.min(15, state.strip.stepsUp + 1); refreshStrip();
-  });
+        // ===== OFFSET TAB =====
+        var offsetBaseTimeEl = document.getElementById("offsetBaseTime");
+        var offsetBaseWarningEl = document.getElementById("offsetBaseWarning");
 
-  var flashIndex = null;
-  var flashTimer = null;
+        offsetBaseTimeEl.addEventListener("input", function () {
+          var v = parseFloat(offsetBaseTimeEl.value);
+          state.offset.baseTime = isNaN(v) ? 0 : v;
+          refreshOffset();
+        });
+        offsetIncrementSel.addEventListener("change", function () {
+          state.offset.increment = parseFloat(offsetIncrementSel.value);
+          refreshOffset();
+        });
 
-  function computeStripRows() {
-    var s = state.strip;
-    var safeBase = s.baseTime > 0 ? s.baseTime : MIN_BASE_TIME;
-    var indices = [];
-    if (!s.centered) {
-      for (var i = 0; i < s.steps; i++) indices.push(i);
-    } else {
-      var down = s.equalSides ? s.stepsEachSide : s.stepsDown;
-      var up = s.equalSides ? s.stepsEachSide : s.stepsUp;
-      for (var j = -down; j <= up; j++) indices.push(j);
-    }
-    var prevTime = null;
-    return indices.map(function (idx) {
-      var stops = idx * s.increment;
-      var rawTime = timeForStops(safeBase, stops);
-      var time = roundTime(rawTime, state.roundMode);
-      var interval = prevTime === null ? time : time - prevTime;
-      prevTime = time;
-      return { index: idx, stops: stops, time: time, interval: interval };
-    });
-  }
+        bindHold(document.getElementById("offsetMinus"), function () {
+          state.offset.count = Math.max(0, state.offset.count - 1);
+          refreshOffset();
+        });
+        bindHold(document.getElementById("offsetPlus"), function () {
+          state.offset.count += 1;
+          refreshOffset();
+        });
+        document
+          .getElementById("offsetReset")
+          .addEventListener("click", function () {
+            state.offset.count = 0;
+            refreshOffset();
+          });
 
-  function refreshStrip() {
-    var s = state.strip;
-    var baseInvalid = !s.baseTime || s.baseTime <= 0;
-    stripBaseTimeEl.classList.toggle("invalid", baseInvalid);
-    stripBaseWarningEl.classList.toggle("hidden", !baseInvalid);
+        document
+          .getElementById("dodgeBtn")
+          .addEventListener("click", function () {
+            state.offset.mode = "dodge";
+            refreshOffset();
+          });
+        document
+          .getElementById("burnBtn")
+          .addEventListener("click", function () {
+            state.offset.mode = "burn";
+            refreshOffset();
+          });
 
-    centeredBox.classList.toggle("checked", s.centered);
-    centeredBox.innerHTML = s.centered ? "&#10003;" : "";
-    centeredHint.textContent = s.centered ? "middle = base" : "base = first strip";
-    sectionSequential.classList.toggle("hidden", s.centered);
-    sectionCentered.classList.toggle("hidden", !s.centered);
+        // ---- saved dodge/burn stages ----
+        function loadStages() {
+          try {
+            var raw = localStorage.getItem("fstopTimerStages");
+            if (raw) {
+              var arr = JSON.parse(raw);
+              if (Array.isArray(arr)) return arr;
+            }
+          } catch (e) {
+            /* storage unavailable, fall through to empty */
+          }
+          return [];
+        }
 
-    document.getElementById("stepsValue").textContent = s.steps;
+        function saveStagesStorage() {
+          try {
+            localStorage.setItem(
+              "fstopTimerStages",
+              JSON.stringify(state.offset.stages),
+            );
+          } catch (e) {
+            /* ignore */
+          }
+        }
 
-    equalSidesBox.classList.toggle("checked", s.equalSides);
-    equalSidesBox.innerHTML = s.equalSides ? "&#10003;" : "";
-    equalSidesHint.textContent = s.equalSides ? "same count both ways" : "custom up/down";
-    sectionEqual.classList.toggle("hidden", !s.equalSides);
-    sectionCustom.classList.toggle("hidden", s.equalSides);
+        state.offset.stages = loadStages();
 
-    document.getElementById("eachSideLabel").textContent = "Steps each side (" + s.stepsEachSide + ")";
-    document.getElementById("eachSideValue").textContent = s.stepsEachSide;
-    document.getElementById("downLabel").textContent = "Steps down (" + s.stepsDown + ")";
-    document.getElementById("downValue").textContent = s.stepsDown;
-    document.getElementById("upLabel").textContent = "Steps up (" + s.stepsUp + ")";
-    document.getElementById("upValue").textContent = s.stepsUp;
+        function computeStageResult(stage) {
+          var o = state.offset;
+          var safeBase = o.baseTime > 0 ? o.baseTime : MIN_BASE_TIME;
+          var roundedBase = roundTime(safeBase, state.roundMode);
+          var signedCount = stage.mode === "dodge" ? -stage.count : stage.count;
+          var stops = signedCount * stage.increment;
+          var resultTime = roundTime(
+            timeForStops(safeBase, stops),
+            state.roundMode,
+          );
+          var delta = resultTime - roundedBase;
+          var actionTime = stage.count === 0 ? roundedBase : Math.abs(delta);
+          return {
+            stops: stops,
+            actionTime: actionTime,
+            resultTime: resultTime,
+          };
+        }
 
-    var rows = computeStripRows();
-    var body = document.getElementById("stripTableBody");
-    var html = "";
-    rows.forEach(function (r, idx) {
-      var indistinguishable = idx !== 0 && r.interval <= 0;
-      var isFlash = flashIndex === r.index;
-      html += '<button class="row-btn' + (isFlash ? " flash" : "") + '" data-index="' + r.index + '" data-time="' + r.time + '">' +
-        '<div class="c-step">' + r.index + '</div>' +
-        '<div class="c-stops">' + formatStops(r.stops) + '</div>' +
-        '<div class="c-add">' + (idx === 0 ? "" : "+") + formatTime(r.interval) + '</div>' +
-        '<div class="c-total">' + formatTime(r.time) + '</div>' +
-      '</button>';
-      if (indistinguishable) {
-        html += '<div class="row-note warning">&#9888; Rounds to the same time as the previous step</div>';
-      }
-      if (r.time < SHORT_TIME_WARNING) {
-        html += '<div class="row-note warning">&#9888; Under ' + SHORT_TIME_WARNING + 's &mdash; hard to hand-time</div>';
-      }
-    });
-    body.innerHTML = html;
+        function renderStages() {
+          var listEl = document.getElementById("stagesList");
+          var fieldEl = document.getElementById("stagesField");
+          var stages = state.offset.stages;
 
-    body.querySelectorAll(".row-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var idx = parseFloat(btn.getAttribute("data-index"));
-        var time = parseFloat(btn.getAttribute("data-time"));
-        state.offset.baseTime = time;
-        offsetBaseTimeEl.value = time;
-        refreshOffset();
-        flashIndex = idx;
+          fieldEl.classList.toggle("hidden", stages.length === 0);
+          if (stages.length === 0) {
+            listEl.innerHTML = "";
+            renderSequenceUI();
+            return;
+          }
+
+          var html = "";
+          stages.forEach(function (stage) {
+            var incLabel = INCREMENTS.filter(function (i) {
+              return i.value === stage.increment;
+            })[0];
+            var r = computeStageResult(stage);
+            var sign =
+              stage.count === 0 ? "" : stage.mode === "dodge" ? "\u2212" : "+";
+            var desc =
+              (stage.mode === "dodge" ? "Dodge" : "Burn") +
+              " " +
+              stage.count +
+              "\u00d7" +
+              (incLabel ? incLabel.label : "");
+            html +=
+              '<div class="stage-row">' +
+              '<button class="stage-play" data-play="' +
+              stage.id +
+              '">&#9654;</button>' +
+              '<button class="stage-name-btn" data-id="' +
+              stage.id +
+              '">' +
+              '<span class="n">' +
+              escapeHtml(stage.name) +
+              "</span>" +
+              '<span class="d">' +
+              desc +
+              "</span>" +
+              "</button>" +
+              '<span class="stage-time">' +
+              sign +
+              formatTime(r.actionTime) +
+              "</span>" +
+              '<button class="stage-del" data-del="' +
+              stage.id +
+              '">&times;</button>' +
+              "</div>";
+          });
+          listEl.innerHTML = html;
+
+          listEl.querySelectorAll(".stage-play").forEach(function (btn) {
+            btn.addEventListener("click", function (e) {
+              e.stopPropagation();
+              var id = btn.getAttribute("data-play");
+              var stage = state.offset.stages.filter(function (s) {
+                return s.id === id;
+              })[0];
+              if (!stage) return;
+              var result = computeStageResult(stage);
+              if (result.actionTime > 0) {
+                startCountdown(result.actionTime, null);
+                showTab("timer");
+              }
+            });
+          });
+          listEl.querySelectorAll(".stage-name-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var id = btn.getAttribute("data-id");
+              var stage = state.offset.stages.filter(function (s) {
+                return s.id === id;
+              })[0];
+              if (!stage) return;
+              state.offset.mode = stage.mode;
+              state.offset.count = stage.count;
+              state.offset.increment = stage.increment;
+              offsetIncrementSel.value = stage.increment;
+              refreshOffset();
+            });
+          });
+          listEl.querySelectorAll(".stage-del").forEach(function (btn) {
+            btn.addEventListener("click", function (e) {
+              e.stopPropagation();
+              var id = btn.getAttribute("data-del");
+              state.offset.stages = state.offset.stages.filter(function (s) {
+                return s.id !== id;
+              });
+              saveStagesStorage();
+              renderStages();
+            });
+          });
+
+          renderSequenceUI();
+        }
+
+        document
+          .getElementById("saveStageBtn")
+          .addEventListener("click", function () {
+            var o = state.offset;
+            var nameInput = document.getElementById("stageName");
+            var name = nameInput.value.trim();
+            var incLabel = INCREMENTS.filter(function (i) {
+              return i.value === o.increment;
+            })[0];
+            if (!name) {
+              name =
+                (o.mode === "dodge" ? "Dodge " : "Burn ") +
+                o.count +
+                "\u00d7" +
+                (incLabel ? incLabel.label : "");
+            }
+            state.offset.stages.push({
+              id:
+                Date.now().toString(36) +
+                Math.random().toString(36).slice(2, 7),
+              name: name,
+              mode: o.mode,
+              count: o.count,
+              increment: o.increment,
+            });
+            saveStagesStorage();
+            nameInput.value = "";
+            renderStages();
+          });
+
+        document
+          .getElementById("stageName")
+          .addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              document.getElementById("saveStageBtn").click();
+            }
+          });
+
+        function computeOffsetResult() {
+          var o = state.offset;
+          var signedCount = o.mode === "dodge" ? -o.count : o.count;
+          var safeBase = o.baseTime > 0 ? o.baseTime : MIN_BASE_TIME;
+          var roundedBase = roundTime(safeBase, state.roundMode);
+          var stops = signedCount * o.increment;
+          var resultTime = roundTime(
+            timeForStops(safeBase, stops),
+            state.roundMode,
+          );
+          var delta = resultTime - roundedBase;
+          var actionTime = o.count === 0 ? roundedBase : Math.abs(delta);
+          return {
+            stops: stops,
+            roundedBase: roundedBase,
+            resultTime: resultTime,
+            actionTime: actionTime,
+          };
+        }
+
+        function refreshOffset() {
+          var o = state.offset;
+          var baseInvalid = !o.baseTime || o.baseTime <= 0;
+          offsetBaseTimeEl.classList.toggle("invalid", baseInvalid);
+          offsetBaseWarningEl.classList.toggle("hidden", !baseInvalid);
+
+          document
+            .getElementById("dodgeBtn")
+            .classList.toggle("active", o.mode === "dodge");
+          document
+            .getElementById("burnBtn")
+            .classList.toggle("active", o.mode === "burn");
+
+          var r = computeOffsetResult();
+          var roundedBase = r.roundedBase,
+            stops = r.stops,
+            resultTime = r.resultTime,
+            actionTime = r.actionTime;
+          var isShort = o.count !== 0 && actionTime < SHORT_TIME_WARNING;
+
+          var incLabel = INCREMENTS.filter(function (i) {
+            return i.value === o.increment;
+          })[0];
+          document.getElementById("offsetStopsLabel").textContent =
+            formatStops(stops) + " stop" + (Math.abs(stops) !== 1 ? "s" : "");
+          document.getElementById("offsetCountLabel").textContent =
+            (o.mode === "dodge" ? "\u2212" : "+") +
+            o.count +
+            " \u00d7 " +
+            (incLabel ? incLabel.label : "");
+
+          document
+            .getElementById("offsetReset")
+            .classList.toggle("hidden", o.count === 0);
+
+          var label =
+            o.count === 0
+              ? "Base exposure"
+              : o.mode === "burn"
+                ? "Burn \u2014 additional time after base"
+                : "Dodge \u2014 time to hold back";
+          document.getElementById("resultLabel").textContent = label;
+          var readoutSign =
+            o.count === 0 ? "" : o.mode === "dodge" ? "\u2212" : "+";
+          document.getElementById("resultTime").textContent =
+            readoutSign + formatTime(actionTime);
+
+          var secondary = document.getElementById("resultSecondary");
+          if (o.count !== 0) {
+            secondary.textContent =
+              "total " +
+              formatTime(resultTime) +
+              " vs base " +
+              formatTime(roundedBase);
+            secondary.classList.remove("hidden");
+          } else {
+            secondary.classList.add("hidden");
+          }
+          document
+            .getElementById("resultWarning")
+            .classList.toggle("hidden", !isShort);
+
+          renderStages();
+        }
+
+        document
+          .getElementById("startOffsetTimerBtn")
+          .addEventListener("click", function () {
+            var r = computeOffsetResult();
+            if (r.actionTime > 0) {
+              startCountdown(r.actionTime, null);
+              showTab("timer");
+            }
+          });
+
+        // ===== rounding (shared) =====
+        document
+          .getElementById("roundMode")
+          .addEventListener("change", function (e) {
+            state.roundMode = e.target.value;
+            refreshStrip();
+            refreshOffset();
+          });
+
+        // ===== TIMER =====
+        var timerState = {
+          totalSeconds: 0,
+          remaining: 0,
+          running: false,
+          paused: false,
+          endTime: null,
+          rafId: null,
+          activePreset: null,
+          lastTickSecond: null,
+          ticksMuted: false,
+        };
+        var sequenceIndex = -1; // index into state.offset.stages of the loaded/running print-sequence step, -1 = none
+
+        function formatClock(seconds) {
+          seconds = Math.max(0, Math.ceil(seconds));
+          var m = Math.floor(seconds / 60);
+          var s = seconds % 60;
+          return m + ":" + (s < 10 ? "0" : "") + s;
+        }
+
+        var timerReadoutEl = document.getElementById("timerReadout");
+        var timerStateLabelEl = document.getElementById("timerStateLabel");
+        var timerProgressBarEl = document.getElementById("timerProgressBar");
+        var timerPauseBtn = document.getElementById("timerPauseBtn");
+        var timerResetBtn = document.getElementById("timerResetBtn");
+
+        function refreshTimerUI() {
+          timerReadoutEl.textContent = formatClock(timerState.remaining);
+
+          var label = "Ready";
+          if (timerState.running) label = "Running";
+          else if (timerState.paused) label = "Paused";
+          else if (timerState.totalSeconds > 0 && timerState.remaining <= 0)
+            label = "Done";
+          else if (sequenceIndex !== -1 && state.offset.stages[sequenceIndex])
+            label = "Up next \u2014 " + state.offset.stages[sequenceIndex].name;
+          timerStateLabelEl.textContent = label;
+
+          var pct =
+            timerState.totalSeconds > 0
+              ? Math.min(
+                  100,
+                  Math.max(
+                    0,
+                    ((timerState.totalSeconds - timerState.remaining) /
+                      timerState.totalSeconds) *
+                      100,
+                  ),
+                )
+              : 0;
+          timerProgressBarEl.style.width = pct + "%";
+
+          timerPauseBtn.disabled = !(timerState.running || timerState.paused);
+          timerPauseBtn.textContent = timerState.paused ? "Resume" : "Pause";
+          timerResetBtn.disabled = timerState.totalSeconds === 0;
+
+          document.querySelectorAll(".preset-btn").forEach(function (btn) {
+            btn.classList.toggle(
+              "active",
+              timerState.activePreset === btn.getAttribute("data-seconds"),
+            );
+          });
+        }
+
+        function timerTick() {
+          var now = Date.now();
+          var remaining = (timerState.endTime - now) / 1000;
+          if (remaining <= 0) {
+            timerState.remaining = 0;
+            timerState.running = false;
+            refreshTimerUI();
+            onTimerComplete();
+            return;
+          }
+          var secLeft = Math.ceil(remaining);
+          if (secLeft !== timerState.lastTickSecond) {
+            timerState.lastTickSecond = secLeft;
+            maybePlayTick(secLeft);
+          }
+          timerState.remaining = remaining;
+          refreshTimerUI();
+          timerState.rafId = requestAnimationFrame(timerTick);
+        }
+
+        function startCountdown(totalSec, presetKey) {
+          cancelAnimationFrame(timerState.rafId);
+          timerReadoutEl.classList.remove("timer-complete");
+          timerState.totalSeconds = totalSec;
+          timerState.remaining = totalSec;
+          timerState.running = true;
+          timerState.paused = false;
+          timerState.activePreset = presetKey || null;
+          timerState.lastTickSecond = Math.ceil(totalSec);
+          timerState.endTime = Date.now() + totalSec * 1000;
+          timerTick();
+          renderSequenceUI();
+        }
+
+        function pauseResumeCountdown() {
+          if (timerState.running) {
+            cancelAnimationFrame(timerState.rafId);
+            timerState.running = false;
+            timerState.paused = true;
+            refreshTimerUI();
+          } else if (timerState.paused) {
+            timerState.endTime = Date.now() + timerState.remaining * 1000;
+            timerState.running = true;
+            timerState.paused = false;
+            timerTick();
+          }
+          renderSequenceUI();
+        }
+
+        function resetCountdown() {
+          cancelAnimationFrame(timerState.rafId);
+          timerReadoutEl.classList.remove("timer-complete");
+          timerState.totalSeconds = 0;
+          timerState.remaining = 0;
+          timerState.running = false;
+          timerState.paused = false;
+          timerState.activePreset = null;
+          timerState.lastTickSecond = null;
+          sequenceIndex = -1;
+          refreshTimerUI();
+          renderSequenceUI();
+        }
+
+        // ---- print sequence: run through saved dodge/burn stages in order ----
+        function getSequenceStages() {
+          return state.offset.stages;
+        }
+
+        function loadPendingStage(seconds, presetKey) {
+          cancelAnimationFrame(timerState.rafId);
+          timerReadoutEl.classList.remove("timer-complete");
+          timerState.totalSeconds = seconds;
+          timerState.remaining = seconds;
+          timerState.running = false;
+          timerState.paused = false;
+          timerState.activePreset = presetKey || null;
+          timerState.lastTickSecond = null;
+          refreshTimerUI();
+        }
+
+        function beginSequenceStage(idx) {
+          var stages = getSequenceStages();
+          if (idx < 0 || idx >= stages.length) return;
+          sequenceIndex = idx;
+          var r = computeStageResult(stages[idx]);
+          loadPendingStage(r.actionTime, null);
+          renderSequenceUI();
+        }
+
+        function startSequenceCurrent() {
+          var stages = getSequenceStages();
+          if (stages.length === 0) return;
+          if (sequenceIndex === -1) sequenceIndex = 0;
+          if (sequenceIndex >= stages.length) return;
+          var r = computeStageResult(stages[sequenceIndex]);
+          startCountdown(r.actionTime, null);
+        }
+
+        function advanceSequenceIfActive() {
+          if (sequenceIndex === -1) return;
+          var stages = getSequenceStages();
+          var nextIndex = sequenceIndex + 1;
+          setTimeout(function () {
+            if (nextIndex < stages.length) {
+              sequenceIndex = nextIndex;
+              var r = computeStageResult(stages[sequenceIndex]);
+              loadPendingStage(r.actionTime, null);
+            } else {
+              sequenceIndex = -1;
+              refreshTimerUI();
+            }
+            renderSequenceUI();
+          }, 1200);
+        }
+
+        function renderSequenceUI() {
+          var stages = getSequenceStages();
+          var fieldEl = document.getElementById("sequenceField");
+          var basicEl = document.getElementById("basicTimerControls");
+          var hasStages = stages.length > 0;
+          fieldEl.classList.toggle("hidden", !hasStages);
+          basicEl.classList.toggle("hidden", hasStages);
+          if (!hasStages) {
+            document.getElementById("sequenceList").innerHTML = "";
+            return;
+          }
+
+          var listEl = document.getElementById("sequenceList");
+          var html = "";
+          stages.forEach(function (stage, idx) {
+            var incLabel = INCREMENTS.filter(function (i) {
+              return i.value === stage.increment;
+            })[0];
+            var r = computeStageResult(stage);
+            var sign =
+              stage.count === 0 ? "" : stage.mode === "dodge" ? "\u2212" : "+";
+            var desc =
+              (stage.mode === "dodge" ? "Dodge" : "Burn") +
+              " " +
+              stage.count +
+              "\u00d7" +
+              (incLabel ? incLabel.label : "");
+            var rowState = "";
+            if (sequenceIndex > idx) rowState = "done";
+            else if (sequenceIndex === idx)
+              rowState =
+                timerState.running || timerState.paused ? "active" : "ready";
+            html +=
+              '<div class="seq-row ' +
+              rowState +
+              '" data-seq="' +
+              idx +
+              '">' +
+              '<div class="seq-num">' +
+              (idx + 1) +
+              "</div>" +
+              '<div class="seq-info"><span class="n">' +
+              escapeHtml(stage.name) +
+              '</span><span class="d">' +
+              desc +
+              "</span></div>" +
+              '<div class="seq-time">' +
+              sign +
+              formatTime(r.actionTime) +
+              "</div>" +
+              "</div>";
+          });
+          listEl.innerHTML = html;
+
+          listEl.querySelectorAll(".seq-row").forEach(function (row) {
+            row.addEventListener("click", function () {
+              beginSequenceStage(parseInt(row.getAttribute("data-seq"), 10));
+            });
+          });
+
+          var startBtn = document.getElementById("sequenceStartBtn");
+          if (timerState.running || timerState.paused) {
+            startBtn.classList.add("hidden");
+          } else if (sequenceIndex === -1) {
+            startBtn.textContent = "\u25B6 Start sequence";
+            startBtn.classList.remove("hidden");
+          } else if (stages[sequenceIndex]) {
+            startBtn.textContent =
+              "\u25B6 Start: " + stages[sequenceIndex].name;
+            startBtn.classList.remove("hidden");
+          } else {
+            startBtn.classList.add("hidden");
+          }
+        }
+
+        document
+          .getElementById("sequenceStartBtn")
+          .addEventListener("click", startSequenceCurrent);
+
+        var sharedAudioCtx = null;
+        function getAudioCtx() {
+          if (!sharedAudioCtx) {
+            var Ctx = window.AudioContext || window.webkitAudioContext;
+            sharedAudioCtx = new Ctx();
+          }
+          if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
+          return sharedAudioCtx;
+        }
+
+        function playBeep() {
+          try {
+            var ctx = getAudioCtx();
+            [0, 0.28, 0.56].forEach(function (offset) {
+              var osc = ctx.createOscillator();
+              var gain = ctx.createGain();
+              osc.type = "sine";
+              osc.frequency.value = 880;
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              var t = ctx.currentTime + offset;
+              gain.gain.setValueAtTime(0.0001, t);
+              gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+              gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+              osc.start(t);
+              osc.stop(t + 0.25);
+            });
+          } catch (e) {
+            /* audio unavailable, ignore */
+          }
+        }
+
+        function playTick(urgent) {
+          if (timerState.ticksMuted) return;
+          try {
+            var ctx = getAudioCtx();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = "square";
+            osc.frequency.value = urgent ? 1000 : 700;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            var t = ctx.currentTime;
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(
+              urgent ? 0.16 : 0.1,
+              t + 0.004,
+            );
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+            osc.start(t);
+            osc.stop(t + 0.09);
+          } catch (e) {
+            /* audio unavailable, ignore */
+          }
+        }
+
+        function maybePlayTick(secLeft) {
+          if (secLeft <= 0) return;
+          if (secLeft <= 10) {
+            playTick(true);
+          } else if (secLeft % 30 === 0) {
+            playTick(false);
+          }
+        }
+
+        function onTimerComplete() {
+          timerReadoutEl.classList.add("timer-complete");
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+          playBeep();
+          advanceSequenceIfActive();
+        }
+
+        document
+          .getElementById("tickMuteToggle")
+          .addEventListener("click", function () {
+            timerState.ticksMuted = !timerState.ticksMuted;
+            var box = document.getElementById("tickMuteBox");
+            var hint = document.getElementById("tickMuteHint");
+            var on = !timerState.ticksMuted;
+            box.classList.toggle("checked", on);
+            box.innerHTML = on ? "&#10003;" : "";
+            hint.textContent = on ? "on" : "muted";
+          });
+
+        // ===== customizable presets =====
+        var DEFAULT_PRESETS = [30, 90, 180];
+
+        function loadPresets() {
+          try {
+            var raw = localStorage.getItem("fstopTimerPresets");
+            if (raw) {
+              var arr = JSON.parse(raw);
+              if (Array.isArray(arr) && arr.length === 3)
+                return arr.map(Number);
+            }
+          } catch (e) {
+            /* storage unavailable, fall through to defaults */
+          }
+          return DEFAULT_PRESETS.slice();
+        }
+
+        function savePresets() {
+          try {
+            localStorage.setItem(
+              "fstopTimerPresets",
+              JSON.stringify(timerPresets),
+            );
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        var timerPresets = loadPresets();
+        var editingPresetIndex = null;
+        var presetEditor = document.getElementById("presetEditor");
+
+        function renderPresetRow() {
+          var row = document.getElementById("presetRow");
+          row.innerHTML = "";
+          timerPresets.forEach(function (secs, idx) {
+            var btn = document.createElement("button");
+            btn.className = "preset-btn";
+            btn.textContent = formatClock(secs);
+            btn.setAttribute("data-seconds", secs);
+
+            var pressTimer = null;
+            var longPressed = false;
+
+            btn.addEventListener("pointerdown", function () {
+              longPressed = false;
+              pressTimer = setTimeout(function () {
+                longPressed = true;
+                if (navigator.vibrate) navigator.vibrate(30);
+                openPresetEditor(idx);
+              }, 550);
+            });
+            btn.addEventListener("pointerup", function () {
+              clearTimeout(pressTimer);
+              if (!longPressed) startCountdown(secs, String(secs));
+            });
+            btn.addEventListener("pointerleave", function () {
+              clearTimeout(pressTimer);
+            });
+            btn.addEventListener("pointercancel", function () {
+              clearTimeout(pressTimer);
+            });
+
+            row.appendChild(btn);
+          });
+          refreshTimerUI();
+        }
+
+        function openPresetEditor(idx) {
+          editingPresetIndex = idx;
+          document.getElementById("presetEditorLabel").textContent =
+            "Edit preset " + (idx + 1);
+          document.getElementById("presetEditMin").value = Math.floor(
+            timerPresets[idx] / 60,
+          );
+          document.getElementById("presetEditSec").value =
+            timerPresets[idx] % 60;
+          presetEditor.classList.remove("hidden");
+        }
+
+        document
+          .getElementById("presetEditSave")
+          .addEventListener("click", function () {
+            if (editingPresetIndex === null) return;
+            var min =
+              parseFloat(document.getElementById("presetEditMin").value) || 0;
+            var sec =
+              parseFloat(document.getElementById("presetEditSec").value) || 0;
+            var total = Math.max(1, Math.round(min * 60 + sec));
+            timerPresets[editingPresetIndex] = total;
+            savePresets();
+            renderPresetRow();
+            presetEditor.classList.add("hidden");
+            editingPresetIndex = null;
+          });
+
+        document
+          .getElementById("presetEditCancel")
+          .addEventListener("click", function () {
+            presetEditor.classList.add("hidden");
+            editingPresetIndex = null;
+          });
+
+        renderPresetRow();
+
+        document
+          .getElementById("customStartBtn")
+          .addEventListener("click", function () {
+            var min =
+              parseFloat(document.getElementById("customMin").value) || 0;
+            var sec =
+              parseFloat(document.getElementById("customSec").value) || 0;
+            var total = Math.max(0, min * 60 + sec);
+            if (total > 0) startCountdown(total, null);
+          });
+
+        timerPauseBtn.addEventListener("click", pauseResumeCountdown);
+        timerResetBtn.addEventListener("click", resetCountdown);
+
+        refreshTimerUI();
+
+        // ===== tabs =====
+        var tabStripBtn = document.getElementById("tabStripBtn");
+        var tabOffsetBtn = document.getElementById("tabOffsetBtn");
+        var tabTimerBtn = document.getElementById("tabTimerBtn");
+        var panelStrip = document.getElementById("panelStrip");
+        var panelOffset = document.getElementById("panelOffset");
+        var panelTimer = document.getElementById("panelTimer");
+        var roundingField = document.getElementById("roundingField");
+
+        function showTab(name) {
+          tabStripBtn.classList.toggle("active", name === "strip");
+          tabOffsetBtn.classList.toggle("active", name === "offset");
+          tabTimerBtn.classList.toggle("active", name === "timer");
+          panelStrip.classList.toggle("hidden", name !== "strip");
+          panelOffset.classList.toggle("hidden", name !== "offset");
+          panelTimer.classList.toggle("hidden", name !== "timer");
+          roundingField.classList.toggle("hidden", name === "timer");
+          currentTab = name;
+          if (name === "timer") renderSequenceUI();
+        }
+
+        tabStripBtn.addEventListener("click", function () {
+          showTab("strip");
+        });
+        tabOffsetBtn.addEventListener("click", function () {
+          showTab("offset");
+        });
+        tabTimerBtn.addEventListener("click", function () {
+          showTab("timer");
+        });
+
+        // ===== swipe between tabs =====
+        var TAB_ORDER = ["strip", "offset", "timer"];
+        var currentTab = "strip";
+        var swipeStartX = null;
+        var swipeStartY = null;
+        var swipeTracking = false;
+
+        var appEl = document.getElementById("app");
+
+        appEl.addEventListener(
+          "touchstart",
+          function (e) {
+            if (e.touches.length !== 1) return;
+            swipeStartX = e.touches[0].clientX;
+            swipeStartY = e.touches[0].clientY;
+            swipeTracking = true;
+          },
+          { passive: true },
+        );
+
+        appEl.addEventListener(
+          "touchmove",
+          function (e) {
+            if (!swipeTracking || e.touches.length !== 1) return;
+            var dx = e.touches[0].clientX - swipeStartX;
+            var dy = e.touches[0].clientY - swipeStartY;
+            // once a swipe is clearly horizontal, stop the page from also trying to rubber-band sideways
+            if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+              e.preventDefault();
+            }
+          },
+          { passive: false },
+        );
+
+        appEl.addEventListener("touchend", function (e) {
+          if (!swipeTracking) return;
+          swipeTracking = false;
+          var touch = e.changedTouches[0];
+          var dx = touch.clientX - swipeStartX;
+          var dy = touch.clientY - swipeStartY;
+          var SWIPE_THRESHOLD = 60;
+          if (
+            Math.abs(dx) < SWIPE_THRESHOLD ||
+            Math.abs(dx) < Math.abs(dy) * 1.5
+          )
+            return;
+
+          var idx = TAB_ORDER.indexOf(currentTab);
+          if (dx < 0 && idx < TAB_ORDER.length - 1) {
+            showTab(TAB_ORDER[idx + 1]);
+          } else if (dx > 0 && idx > 0) {
+            showTab(TAB_ORDER[idx - 1]);
+          }
+        });
+
+        // initial render
         refreshStrip();
-        clearTimeout(flashTimer);
-        flashTimer = setTimeout(function () { flashIndex = null; refreshStrip(); }, 500);
-      });
-    });
-  }
-
-  // ===== OFFSET TAB =====
-  var offsetBaseTimeEl = document.getElementById("offsetBaseTime");
-  var offsetBaseWarningEl = document.getElementById("offsetBaseWarning");
-
-  offsetBaseTimeEl.addEventListener("input", function () {
-    var v = parseFloat(offsetBaseTimeEl.value);
-    state.offset.baseTime = isNaN(v) ? 0 : v;
-    refreshOffset();
-  });
-  offsetIncrementSel.addEventListener("change", function () {
-    state.offset.increment = parseFloat(offsetIncrementSel.value);
-    refreshOffset();
-  });
-
-  bindHold(document.getElementById("offsetMinus"), function () {
-    state.offset.count = Math.max(0, state.offset.count - 1); refreshOffset();
-  });
-  bindHold(document.getElementById("offsetPlus"), function () {
-    state.offset.count += 1; refreshOffset();
-  });
-  document.getElementById("offsetReset").addEventListener("click", function () {
-    state.offset.count = 0; refreshOffset();
-  });
-
-  document.getElementById("dodgeBtn").addEventListener("click", function () {
-    state.offset.mode = "dodge"; refreshOffset();
-  });
-  document.getElementById("burnBtn").addEventListener("click", function () {
-    state.offset.mode = "burn"; refreshOffset();
-  });
-
-  function refreshOffset() {
-    var o = state.offset;
-    var baseInvalid = !o.baseTime || o.baseTime <= 0;
-    offsetBaseTimeEl.classList.toggle("invalid", baseInvalid);
-    offsetBaseWarningEl.classList.toggle("hidden", !baseInvalid);
-
-    document.getElementById("dodgeBtn").classList.toggle("active", o.mode === "dodge");
-    document.getElementById("burnBtn").classList.toggle("active", o.mode === "burn");
-
-    var signedCount = o.mode === "dodge" ? -o.count : o.count;
-    var safeBase = o.baseTime > 0 ? o.baseTime : MIN_BASE_TIME;
-    var roundedBase = roundTime(safeBase, state.roundMode);
-    var stops = signedCount * o.increment;
-    var resultTime = roundTime(timeForStops(safeBase, stops), state.roundMode);
-    var delta = resultTime - roundedBase;
-    var actionTime = o.count === 0 ? roundedBase : Math.abs(delta);
-    var isShort = o.count !== 0 && actionTime < SHORT_TIME_WARNING;
-
-    var incLabel = INCREMENTS.filter(function (i) { return i.value === o.increment; })[0];
-    document.getElementById("offsetStopsLabel").textContent =
-      formatStops(stops) + " stop" + (Math.abs(stops) !== 1 ? "s" : "");
-    document.getElementById("offsetCountLabel").textContent =
-      (o.mode === "dodge" ? "\u2212" : "+") + o.count + " \u00d7 " + (incLabel ? incLabel.label : "");
-
-    document.getElementById("offsetReset").classList.toggle("hidden", o.count === 0);
-
-    var label = o.count === 0 ? "Base exposure" : (o.mode === "burn" ? "Burn \u2014 additional time after base" : "Dodge \u2014 time to hold back");
-    document.getElementById("resultLabel").textContent = label;
-    var readoutSign = o.count === 0 ? "" : (o.mode === "dodge" ? "\u2212" : "+");
-    document.getElementById("resultTime").textContent = readoutSign + formatTime(actionTime);
-
-    var secondary = document.getElementById("resultSecondary");
-    if (o.count !== 0) {
-      secondary.textContent = "total " + formatTime(resultTime) + " vs base " + formatTime(roundedBase);
-      secondary.classList.remove("hidden");
-    } else {
-      secondary.classList.add("hidden");
-    }
-    document.getElementById("resultWarning").classList.toggle("hidden", !isShort);
-  }
-
-  // ===== rounding (shared) =====
-  document.getElementById("roundMode").addEventListener("change", function (e) {
-    state.roundMode = e.target.value;
-    refreshStrip();
-    refreshOffset();
-  });
-
-  // ===== TIMER =====
-  var timerState = {
-    totalSeconds: 0,
-    remaining: 0,
-    running: false,
-    paused: false,
-    endTime: null,
-    rafId: null,
-    activePreset: null,
-    lastTickSecond: null,
-    ticksMuted: false,
-  };
-
-  function formatClock(seconds) {
-    seconds = Math.max(0, Math.ceil(seconds));
-    var m = Math.floor(seconds / 60);
-    var s = seconds % 60;
-    return m + ":" + (s < 10 ? "0" : "") + s;
-  }
-
-  var timerReadoutEl = document.getElementById("timerReadout");
-  var timerStateLabelEl = document.getElementById("timerStateLabel");
-  var timerProgressBarEl = document.getElementById("timerProgressBar");
-  var timerPauseBtn = document.getElementById("timerPauseBtn");
-  var timerResetBtn = document.getElementById("timerResetBtn");
-
-  function refreshTimerUI() {
-    timerReadoutEl.textContent = formatClock(timerState.remaining);
-
-    var label = "Ready";
-    if (timerState.running) label = "Running";
-    else if (timerState.paused) label = "Paused";
-    else if (timerState.totalSeconds > 0 && timerState.remaining <= 0) label = "Done";
-    timerStateLabelEl.textContent = label;
-
-    var pct = timerState.totalSeconds > 0
-      ? Math.min(100, Math.max(0, ((timerState.totalSeconds - timerState.remaining) / timerState.totalSeconds) * 100))
-      : 0;
-    timerProgressBarEl.style.width = pct + "%";
-
-    timerPauseBtn.disabled = !(timerState.running || timerState.paused);
-    timerPauseBtn.textContent = timerState.paused ? "Resume" : "Pause";
-    timerResetBtn.disabled = timerState.totalSeconds === 0;
-
-    document.querySelectorAll(".preset-btn").forEach(function (btn) {
-      btn.classList.toggle("active", timerState.activePreset === btn.getAttribute("data-seconds"));
-    });
-  }
-
-  function timerTick() {
-    var now = Date.now();
-    var remaining = (timerState.endTime - now) / 1000;
-    if (remaining <= 0) {
-      timerState.remaining = 0;
-      timerState.running = false;
-      refreshTimerUI();
-      onTimerComplete();
-      return;
-    }
-    var secLeft = Math.ceil(remaining);
-    if (secLeft !== timerState.lastTickSecond) {
-      timerState.lastTickSecond = secLeft;
-      maybePlayTick(secLeft);
-    }
-    timerState.remaining = remaining;
-    refreshTimerUI();
-    timerState.rafId = requestAnimationFrame(timerTick);
-  }
-
-  function startCountdown(totalSec, presetKey) {
-    cancelAnimationFrame(timerState.rafId);
-    timerReadoutEl.classList.remove("timer-complete");
-    timerState.totalSeconds = totalSec;
-    timerState.remaining = totalSec;
-    timerState.running = true;
-    timerState.paused = false;
-    timerState.activePreset = presetKey || null;
-    timerState.lastTickSecond = Math.ceil(totalSec);
-    timerState.endTime = Date.now() + totalSec * 1000;
-    timerTick();
-  }
-
-  function pauseResumeCountdown() {
-    if (timerState.running) {
-      cancelAnimationFrame(timerState.rafId);
-      timerState.running = false;
-      timerState.paused = true;
-      refreshTimerUI();
-    } else if (timerState.paused) {
-      timerState.endTime = Date.now() + timerState.remaining * 1000;
-      timerState.running = true;
-      timerState.paused = false;
-      timerTick();
-    }
-  }
-
-  function resetCountdown() {
-    cancelAnimationFrame(timerState.rafId);
-    timerReadoutEl.classList.remove("timer-complete");
-    timerState.totalSeconds = 0;
-    timerState.remaining = 0;
-    timerState.running = false;
-    timerState.paused = false;
-    timerState.activePreset = null;
-    timerState.lastTickSecond = null;
-    refreshTimerUI();
-  }
-
-  var sharedAudioCtx = null;
-  function getAudioCtx() {
-    if (!sharedAudioCtx) {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      sharedAudioCtx = new Ctx();
-    }
-    if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
-    return sharedAudioCtx;
-  }
-
-  function playBeep() {
-    try {
-      var ctx = getAudioCtx();
-      [0, 0.28, 0.56].forEach(function (offset) {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = 880;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        var t = ctx.currentTime + offset;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-        osc.start(t);
-        osc.stop(t + 0.25);
-      });
-    } catch (e) { /* audio unavailable, ignore */ }
-  }
-
-  function playTick(urgent) {
-    if (timerState.ticksMuted) return;
-    try {
-      var ctx = getAudioCtx();
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.type = "square";
-      osc.frequency.value = urgent ? 1000 : 700;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      var t = ctx.currentTime;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(urgent ? 0.16 : 0.1, t + 0.004);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
-      osc.start(t);
-      osc.stop(t + 0.09);
-    } catch (e) { /* audio unavailable, ignore */ }
-  }
-
-  function maybePlayTick(secLeft) {
-    if (secLeft <= 0) return;
-    if (secLeft <= 10) {
-      playTick(true);
-    } else if (secLeft % 30 === 0) {
-      playTick(false);
-    }
-  }
-
-  function onTimerComplete() {
-    timerReadoutEl.classList.add("timer-complete");
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
-    playBeep();
-  }
-
-  document.getElementById("tickMuteToggle").addEventListener("click", function () {
-    timerState.ticksMuted = !timerState.ticksMuted;
-    var box = document.getElementById("tickMuteBox");
-    var hint = document.getElementById("tickMuteHint");
-    var on = !timerState.ticksMuted;
-    box.classList.toggle("checked", on);
-    box.innerHTML = on ? "&#10003;" : "";
-    hint.textContent = on ? "on" : "muted";
-  });
-
-  // ===== customizable presets =====
-  var DEFAULT_PRESETS = [30, 90, 180];
-
-  function loadPresets() {
-    try {
-      var raw = localStorage.getItem("fstopTimerPresets");
-      if (raw) {
-        var arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length === 3) return arr.map(Number);
-      }
-    } catch (e) { /* storage unavailable, fall through to defaults */ }
-    return DEFAULT_PRESETS.slice();
-  }
-
-  function savePresets() {
-    try { localStorage.setItem("fstopTimerPresets", JSON.stringify(timerPresets)); } catch (e) { /* ignore */ }
-  }
-
-  var timerPresets = loadPresets();
-  var editingPresetIndex = null;
-  var presetEditor = document.getElementById("presetEditor");
-
-  function renderPresetRow() {
-    var row = document.getElementById("presetRow");
-    row.innerHTML = "";
-    timerPresets.forEach(function (secs, idx) {
-      var btn = document.createElement("button");
-      btn.className = "preset-btn";
-      btn.textContent = formatClock(secs);
-      btn.setAttribute("data-seconds", secs);
-
-      var pressTimer = null;
-      var longPressed = false;
-
-      btn.addEventListener("pointerdown", function () {
-        longPressed = false;
-        pressTimer = setTimeout(function () {
-          longPressed = true;
-          if (navigator.vibrate) navigator.vibrate(30);
-          openPresetEditor(idx);
-        }, 550);
-      });
-      btn.addEventListener("pointerup", function () {
-        clearTimeout(pressTimer);
-        if (!longPressed) startCountdown(secs, String(secs));
-      });
-      btn.addEventListener("pointerleave", function () { clearTimeout(pressTimer); });
-      btn.addEventListener("pointercancel", function () { clearTimeout(pressTimer); });
-
-      row.appendChild(btn);
-    });
-    refreshTimerUI();
-  }
-
-  function openPresetEditor(idx) {
-    editingPresetIndex = idx;
-    document.getElementById("presetEditorLabel").textContent = "Edit preset " + (idx + 1);
-    document.getElementById("presetEditMin").value = Math.floor(timerPresets[idx] / 60);
-    document.getElementById("presetEditSec").value = timerPresets[idx] % 60;
-    presetEditor.classList.remove("hidden");
-  }
-
-  document.getElementById("presetEditSave").addEventListener("click", function () {
-    if (editingPresetIndex === null) return;
-    var min = parseFloat(document.getElementById("presetEditMin").value) || 0;
-    var sec = parseFloat(document.getElementById("presetEditSec").value) || 0;
-    var total = Math.max(1, Math.round(min * 60 + sec));
-    timerPresets[editingPresetIndex] = total;
-    savePresets();
-    renderPresetRow();
-    presetEditor.classList.add("hidden");
-    editingPresetIndex = null;
-  });
-
-  document.getElementById("presetEditCancel").addEventListener("click", function () {
-    presetEditor.classList.add("hidden");
-    editingPresetIndex = null;
-  });
-
-  renderPresetRow();
-
-  document.getElementById("customStartBtn").addEventListener("click", function () {
-    var min = parseFloat(document.getElementById("customMin").value) || 0;
-    var sec = parseFloat(document.getElementById("customSec").value) || 0;
-    var total = Math.max(0, min * 60 + sec);
-    if (total > 0) startCountdown(total, null);
-  });
-
-  timerPauseBtn.addEventListener("click", pauseResumeCountdown);
-  timerResetBtn.addEventListener("click", resetCountdown);
-
-  refreshTimerUI();
-
-  // ===== tabs =====
-  var tabStripBtn = document.getElementById("tabStripBtn");
-  var tabOffsetBtn = document.getElementById("tabOffsetBtn");
-  var tabTimerBtn = document.getElementById("tabTimerBtn");
-  var panelStrip = document.getElementById("panelStrip");
-  var panelOffset = document.getElementById("panelOffset");
-  var panelTimer = document.getElementById("panelTimer");
-  var roundingField = document.getElementById("roundingField");
-
-  function showTab(name) {
-    tabStripBtn.classList.toggle("active", name === "strip");
-    tabOffsetBtn.classList.toggle("active", name === "offset");
-    tabTimerBtn.classList.toggle("active", name === "timer");
-    panelStrip.classList.toggle("hidden", name !== "strip");
-    panelOffset.classList.toggle("hidden", name !== "offset");
-    panelTimer.classList.toggle("hidden", name !== "timer");
-    roundingField.classList.toggle("hidden", name === "timer");
-    currentTab = name;
-  }
-
-  tabStripBtn.addEventListener("click", function () { showTab("strip"); });
-  tabOffsetBtn.addEventListener("click", function () { showTab("offset"); });
-  tabTimerBtn.addEventListener("click", function () { showTab("timer"); });
-
-  // ===== swipe between tabs =====
-  var TAB_ORDER = ["strip", "offset", "timer"];
-  var currentTab = "strip";
-  var swipeStartX = null;
-  var swipeStartY = null;
-  var swipeTracking = false;
-
-  var appEl = document.getElementById("app");
-
-  appEl.addEventListener("touchstart", function (e) {
-    if (e.touches.length !== 1) return;
-    swipeStartX = e.touches[0].clientX;
-    swipeStartY = e.touches[0].clientY;
-    swipeTracking = true;
-  }, { passive: true });
-
-  appEl.addEventListener("touchmove", function (e) {
-    if (!swipeTracking || e.touches.length !== 1) return;
-    var dx = e.touches[0].clientX - swipeStartX;
-    var dy = e.touches[0].clientY - swipeStartY;
-    // once a swipe is clearly horizontal, stop the page from also trying to rubber-band sideways
-    if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  appEl.addEventListener("touchend", function (e) {
-    if (!swipeTracking) return;
-    swipeTracking = false;
-    var touch = e.changedTouches[0];
-    var dx = touch.clientX - swipeStartX;
-    var dy = touch.clientY - swipeStartY;
-    var SWIPE_THRESHOLD = 60;
-    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-
-    var idx = TAB_ORDER.indexOf(currentTab);
-    if (dx < 0 && idx < TAB_ORDER.length - 1) {
-      showTab(TAB_ORDER[idx + 1]);
-    } else if (dx > 0 && idx > 0) {
-      showTab(TAB_ORDER[idx - 1]);
-    }
-  });
-
-  // initial render
-  refreshStrip();
-  refreshOffset();
-})();
-</script>
-</body>
+        refreshOffset();
+      })();
+    </script>
+  </body>
 </html>
