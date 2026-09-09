@@ -191,6 +191,7 @@
 
     <p class="instruction">Expose one step at a time, starting with the <strong>last</strong> row. The final step will expose the full test strip.</p>
     <p class="footnote">Tap a row to set it as the base time on the Dodge / Burn tab. "Exposure Time" is the interval to run after covering the previous section. "Total time" is the cumulative exposure for that section.</p>
+    <button class="reset-btn" id="resetSettingsBtn">Reset Test Strip &amp; Dodge/Burn settings to defaults</button>
   </div>
 
   <!-- ===== OFFSET PANEL ===== -->
@@ -348,11 +349,66 @@
   }
 
   // ---- state ----
+  var STRIP_DEFAULTS = { baseTime: 8, increment: 1/2, steps: 7, centered: false, equalSides: true, stepsEachSide: 2, stepsDown: 2, stepsUp: 2 };
+  var OFFSET_DEFAULTS = { baseTime: 8, increment: 1/2, mode: "burn" };
+  var ROUND_DEFAULT = "0.1";
+
   var state = {
-    roundMode: "0.1",
-    strip: { baseTime: 8, increment: 1/2, steps: 7, centered: false, equalSides: true, stepsEachSide: 2, stepsDown: 2, stepsUp: 2 },
-    offset: { baseTime: 8, increment: 1/2, count: 0, mode: "burn" }
+    roundMode: ROUND_DEFAULT,
+    strip: Object.assign({}, STRIP_DEFAULTS),
+    offset: Object.assign({}, OFFSET_DEFAULTS, { count: 0 })
   };
+
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem("fstopTimerSettings");
+      if (raw) {
+        var obj = JSON.parse(raw);
+        if (obj && typeof obj === "object") return obj;
+      }
+    } catch (e) { /* storage unavailable */ }
+    return null;
+  }
+
+  function saveSettings() {
+    try {
+      var payload = {
+        roundMode: state.roundMode,
+        strip: {
+          baseTime: state.strip.baseTime,
+          increment: state.strip.increment,
+          steps: state.strip.steps,
+          centered: state.strip.centered,
+          equalSides: state.strip.equalSides,
+          stepsEachSide: state.strip.stepsEachSide,
+          stepsDown: state.strip.stepsDown,
+          stepsUp: state.strip.stepsUp
+        },
+        offset: {
+          baseTime: state.offset.baseTime,
+          increment: state.offset.increment,
+          mode: state.offset.mode
+        }
+      };
+      localStorage.setItem("fstopTimerSettings", JSON.stringify(payload));
+    } catch (e) { /* ignore */ }
+  }
+
+  (function applySavedSettings() {
+    var saved = loadSettings();
+    if (!saved) return;
+    if (typeof saved.roundMode === "string") state.roundMode = saved.roundMode;
+    if (saved.strip) {
+      Object.keys(STRIP_DEFAULTS).forEach(function (k) {
+        if (saved.strip[k] !== undefined) state.strip[k] = saved.strip[k];
+      });
+    }
+    if (saved.offset) {
+      Object.keys(OFFSET_DEFAULTS).forEach(function (k) {
+        if (saved.offset[k] !== undefined) state.offset[k] = saved.offset[k];
+      });
+    }
+  })();
 
   // ---- helpers ----
   function populateIncrementSelect(sel) {
@@ -369,6 +425,7 @@
   populateIncrementSelect(offsetIncrementSel);
   stripIncrementSel.value = state.strip.increment;
   offsetIncrementSel.value = state.offset.increment;
+  document.getElementById("roundMode").value = state.roundMode;
 
   function bindHold(el, fn) {
     var t1 = null, t2 = null;
@@ -386,6 +443,7 @@
 
   // ===== TEST STRIP =====
   var stripBaseTimeEl = document.getElementById("stripBaseTime");
+  stripBaseTimeEl.value = state.strip.baseTime;
   var stripBaseWarningEl = document.getElementById("stripBaseWarning");
 
   stripBaseTimeEl.addEventListener("input", function () {
@@ -472,6 +530,7 @@
   }
 
   function refreshStrip() {
+    saveSettings();
     var s = state.strip;
     var baseInvalid = !s.baseTime || s.baseTime <= 0;
     stripBaseTimeEl.classList.toggle("invalid", baseInvalid);
@@ -536,6 +595,7 @@
 
   // ===== OFFSET TAB =====
   var offsetBaseTimeEl = document.getElementById("offsetBaseTime");
+  offsetBaseTimeEl.value = state.offset.baseTime;
   var offsetBaseWarningEl = document.getElementById("offsetBaseWarning");
 
   offsetBaseTimeEl.addEventListener("input", function () {
@@ -566,6 +626,7 @@
   });
 
   function refreshOffset() {
+    saveSettings();
     var o = state.offset;
     var baseInvalid = !o.baseTime || o.baseTime <= 0;
     offsetBaseTimeEl.classList.toggle("invalid", baseInvalid);
@@ -605,6 +666,27 @@
     }
     document.getElementById("resultWarning").classList.toggle("hidden", !isShort);
   }
+
+  document.getElementById("resetSettingsBtn").addEventListener("click", function () {
+    if (!confirm("Reset Test Strip and Dodge/Burn settings to defaults?")) return;
+    try { localStorage.removeItem("fstopTimerSettings"); } catch (e) { /* ignore */ }
+
+    state.roundMode = ROUND_DEFAULT;
+    state.strip = Object.assign({}, STRIP_DEFAULTS);
+    state.offset.baseTime = OFFSET_DEFAULTS.baseTime;
+    state.offset.increment = OFFSET_DEFAULTS.increment;
+    state.offset.mode = OFFSET_DEFAULTS.mode;
+    state.offset.count = 0;
+
+    stripBaseTimeEl.value = state.strip.baseTime;
+    stripIncrementSel.value = state.strip.increment;
+    offsetBaseTimeEl.value = state.offset.baseTime;
+    offsetIncrementSel.value = state.offset.increment;
+    document.getElementById("roundMode").value = state.roundMode;
+
+    refreshStrip();
+    refreshOffset();
+  });
 
   // ===== rounding (shared) =====
   document.getElementById("roundMode").addEventListener("change", function (e) {
