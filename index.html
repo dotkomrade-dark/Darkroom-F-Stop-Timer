@@ -190,7 +190,12 @@
     </div>
 
     <p class="instruction">Expose one step at a time, starting with the <strong>last</strong> row. The final step will expose the full test strip.</p>
-    <p class="footnote">Tap a row to set it as the base time on the Dodge / Burn tab. "Exposure Time" is the interval to run after covering the previous section. "Total time" is the cumulative exposure for that section.</p>
+    <p class="footnote">With the option below ticked, tapping a row sets that time (rounded to the nearest half second) as the base time on both this tab and the Dodge / Burn tab. "Exposure Time" is the interval to run after covering the previous section. "Total time" is the cumulative exposure for that section.</p>
+    <button class="checkbox-row" id="tapSyncCheckbox">
+      <span class="checkbox-box checked" id="tapSyncBox">&#10003;</span>
+      <span class="checkbox-label">Tap a row to update base times</span>
+      <span class="checkbox-hint">both tabs</span>
+    </button>
     <button class="preset-btn" id="resetSettingsBtn" style="width:100%; font-size:14px; padding:10px 14px; background:transparent;">Reset to defaults</button>
   </div>
 
@@ -349,7 +354,7 @@
   }
 
   // ---- state ----
-  var STRIP_DEFAULTS = { baseTime: 8, increment: 1/2, steps: 7, centered: false, equalSides: true, stepsEachSide: 2, stepsDown: 2, stepsUp: 2 };
+  var STRIP_DEFAULTS = { baseTime: 8, increment: 1/2, steps: 7, centered: false, equalSides: true, stepsEachSide: 2, stepsDown: 2, stepsUp: 2, tapSync: true };
   var OFFSET_DEFAULTS = { baseTime: 8, increment: 1/2, mode: "burn" };
   var ROUND_DEFAULT = "0.1";
 
@@ -382,7 +387,8 @@
           equalSides: state.strip.equalSides,
           stepsEachSide: state.strip.stepsEachSide,
           stepsDown: state.strip.stepsDown,
-          stepsUp: state.strip.stepsUp
+          stepsUp: state.strip.stepsUp,
+          tapSync: state.strip.tapSync
         },
         offset: {
           baseTime: state.offset.baseTime,
@@ -582,13 +588,15 @@
       btn.addEventListener("click", function () {
         var idx = parseFloat(btn.getAttribute("data-index"));
         var time = parseFloat(btn.getAttribute("data-time"));
-        // round to nearest half second (never below 0.5s)
-        time = Math.max(0.5, Math.round(time * 2) / 2);
-        state.offset.baseTime = time;
-        offsetBaseTimeEl.value = time;
-        state.strip.baseTime = time;
-        stripBaseTimeEl.value = time;
-        refreshOffset();
+        if (state.strip.tapSync) {
+          // round to nearest half second (never below 0.5s)
+          time = Math.max(0.5, Math.round(time * 2) / 2);
+          state.offset.baseTime = time;
+          offsetBaseTimeEl.value = time;
+          state.strip.baseTime = time;
+          stripBaseTimeEl.value = time;
+          refreshOffset();
+        }
         flashIndex = idx;
         refreshStrip();
         clearTimeout(flashTimer);
@@ -596,6 +604,18 @@
       });
     });
   }
+
+  var tapSyncBox = document.getElementById("tapSyncBox");
+  function renderTapSync() {
+    tapSyncBox.classList.toggle("checked", state.strip.tapSync);
+    tapSyncBox.innerHTML = state.strip.tapSync ? "&#10003;" : "";
+  }
+  document.getElementById("tapSyncCheckbox").addEventListener("click", function () {
+    state.strip.tapSync = !state.strip.tapSync;
+    renderTapSync();
+    saveSettings();
+  });
+  renderTapSync();
 
   // ===== OFFSET TAB =====
   var offsetBaseTimeEl = document.getElementById("offsetBaseTime");
@@ -687,6 +707,7 @@
     offsetIncrementSel.value = state.offset.increment;
     document.getElementById("roundMode").value = state.roundMode;
 
+    renderTapSync();
     refreshStrip();
     refreshOffset();
   });
