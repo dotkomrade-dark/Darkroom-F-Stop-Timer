@@ -582,8 +582,12 @@
       btn.addEventListener("click", function () {
         var idx = parseFloat(btn.getAttribute("data-index"));
         var time = parseFloat(btn.getAttribute("data-time"));
+        // round to nearest half second (never below 0.5s)
+        time = Math.max(0.5, Math.round(time * 2) / 2);
         state.offset.baseTime = time;
         offsetBaseTimeEl.value = time;
+        state.strip.baseTime = time;
+        stripBaseTimeEl.value = time;
         refreshOffset();
         flashIndex = idx;
         refreshStrip();
